@@ -753,6 +753,159 @@
   }
   .emoji-opt:active { background: var(--border2); }
 
+  /* ── Expense / Split tab ───────────────────────────────────────────────── */
+  .balance-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .balance-card.you-owe  { border-color: #e0555540; background: #e0555508; }
+  .balance-card.you-lent { border-color: #4ade8040; background: #4ade8008; }
+  .balance-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  .debt-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .debt-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .debt-names { font-size: 14px; font-weight: 500; flex: 1; min-width: 0; }
+  .debt-names .debt-arrow { color: var(--text3); font-size: 12px; }
+  .debt-amount { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; flex-shrink: 0; }
+  .debt-amount.owe  { color: var(--danger); }
+  .debt-amount.lent { color: var(--success); }
+  .settle-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--gold);
+    background: var(--gold-dim);
+    color: var(--gold2);
+    cursor: pointer;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+  .expense-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .expense-row:active { opacity: 0.7; }
+  .expense-row-icon { font-size: 20px; flex-shrink: 0; padding-top: 2px; }
+  .expense-row-body { flex: 1; min-width: 0; }
+  .expense-row-title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .expense-row-meta  { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .expense-row-right { text-align: right; flex-shrink: 0; }
+  .expense-row-amount { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; }
+  .expense-row-payer  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .currency-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--card2);
+    color: var(--text2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    letter-spacing: 0.5px;
+    display: inline-block;
+    margin-left: 3px;
+  }
+  .settle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #4ade8008;
+    border: 1px solid #4ade8030;
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+  .settle-row-icon   { font-size: 18px; flex-shrink: 0; }
+  .settle-row-body   { flex: 1; min-width: 0; }
+  .settle-row-desc   { font-size: 13px; color: var(--text); }
+  .settle-row-date   { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .settle-row-amount { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--success); flex-shrink: 0; }
+  .split-type-bar { display: flex; gap: 5px; margin-top: 4px; }
+  .split-type-btn {
+    flex: 1;
+    padding: 8px 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: var(--card);
+    color: var(--text2);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .split-type-btn.selected { background: var(--gold-dim); border-color: var(--gold); color: var(--gold2); }
+  .expense-date-group {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 6px 0;
+    margin-bottom: 6px;
+  }
+  .total-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+  .member-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .member-row:last-child { border-bottom: none; }
+  .member-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    border: 1px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: var(--gold2);
+    flex-shrink: 0;
+  }
+  .split-participants { display: flex; flex-direction: column; gap: 0; }
+  .split-participant-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .split-participant-row:last-child { border-bottom: none; }
+  .rate-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+
 </style>
 </head>
 <body>
@@ -782,6 +935,9 @@
     </div>
     <div class="tab" data-tab="more" onclick="switchTab('more')">
       <span class="tab-icon">⋯</span>More
+    </div>
+    <div class="tab" data-tab="split" onclick="switchTab('split')">
+      <span class="tab-icon">💸</span>Split
     </div>
   </div>
 
@@ -872,6 +1028,10 @@ async function init() {
     }
     if (!appData.groupChecklist) appData.groupChecklist = [];
     if (!appData.groupProgress)  appData.groupProgress  = {};
+    if (!appData.members)        appData.members        = [];
+    if (!appData.expenses)       appData.expenses       = [];
+    if (!appData.settlements)    appData.settlements    = [];
+    if (!appData.tripCurrency)   appData.tripCurrency   = { base: 'SGD', rates: { MAD: 0.14, EUR: 1.45, USD: 1.35 } };
     // Migrate old links → refs
     if (!appData.refs) appData.refs = [];
     if (!appData.refCats) appData.refCats = [];
@@ -927,6 +1087,7 @@ function renderTab(tab) {
     case 'weather':   div.innerHTML = renderWeather(); break;
     case 'refs':      div.innerHTML = renderRefs(); break;
     case 'more':      div.innerHTML = renderMore(); break;
+    case 'split':     div.innerHTML = renderExpenses(); break;
   }
   el.appendChild(div);
 }
@@ -1475,6 +1636,14 @@ function renderMore() {
       <div class="edit-row-label">👤 My user ID</div>
       <div class="edit-row-value" style="font-family:monospace">${userId || 'Unknown'}</div>
     </div>
+    <div class="edit-row" onclick="openManageMembers()">
+      <div class="edit-row-label">👥 Split members</div>
+      <div class="edit-row-value">${(appData.members||[]).length} member${(appData.members||[]).length!==1?'s':''}</div>
+    </div>
+    <div class="edit-row" onclick="openCurrencySettings()">
+      <div class="edit-row-label">💱 Exchange rates</div>
+      <div class="edit-row-value">${appData.tripCurrency?.base||'SGD'} base</div>
+    </div>
   ` : `
     <div style="padding:16px 0;text-align:center;color:var(--text3);font-size:13px">
       To edit trip info, ask the admin to add you via /addadmin
@@ -1609,6 +1778,8 @@ function openSheet(type) {
   requestAnimationFrame(() => {
     const sheet = document.getElementById('sheet');
     sheet.style.transform = 'translateY(0)';
+    // Post-render hooks
+    if (type === 'expense-form') renderSplitInputs();
   });
 }
 
@@ -1884,6 +2055,154 @@ function sheetContent(type) {
         <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
       </div>`;
 
+    // ── Expense Splitter sheets ──────────────────────────────────────────────
+
+    case 'register-member': return `
+      <div class="sheet-title">Join the Split 💸</div>
+      <div class="sheet-sub">Set your display name so the group can see who paid what</div>
+      <div class="sheet-body">
+        <div class="field">
+          <label>Your name</label>
+          <input id="f-member-name" placeholder="e.g. Denzil" autocomplete="off" autofocus>
+        </div>
+        <button class="btn-primary" onclick="submitMemberRegister()">Join the trip</button>
+      </div>`;
+
+    case 'expense-form': {
+      const editing = _editExpenseIdx >= 0;
+      const exp = editing ? appData.expenses[_editExpenseIdx] : null;
+      const members = appData.members || [];
+      const today = new Date().toISOString().slice(0,10);
+      const base = appData.tripCurrency?.base || 'SGD';
+      const allCurrencies = [base, ...Object.keys(appData.tripCurrency?.rates||{}).filter(c=>c!==base), ...SUPPORTED_CURRENCIES.filter(c=>c!==base&&!appData.tripCurrency?.rates?.[c])];
+      const uniqueCurrencies = [...new Set(allCurrencies)];
+      const myMember = _myMember();
+      const defaultPayer = exp?.paidBy || myMember?.id || members[0]?.id || '';
+      const catOptions = EXPENSE_CATEGORIES.map(c => `<option value="${c}" ${(exp?.category||EXPENSE_CATEGORIES[0])===c?'selected':''}>${c}</option>`).join('');
+      const currOptions = uniqueCurrencies.map(c => `<option value="${c}" ${(exp?.currency||base)===c?'selected':''}>${c}</option>`).join('');
+      const memberOptions = members.map(m => `<option value="${m.id}" ${defaultPayer===m.id?'selected':''}>${m.name}</option>`).join('');
+      const splitTypes = ['equal','exact','percent','shares'];
+      const splitBtns = splitTypes.map(t => `<button type="button" class="split-type-btn ${_splitType===t?'selected':''}" data-type="${t}" onclick="setSplitType('${t}')">${t.charAt(0).toUpperCase()+t.slice(1)}</button>`).join('');
+      if (!members.length) return `
+        <div class="sheet-title">Add Expense</div>
+        <div class="sheet-body">
+          <div style="text-align:center;padding:20px 0;color:var(--text3);font-size:14px">No members yet.<br>Ask friends to open the Split tab to join.</div>
+          <button class="btn-secondary" onclick="_closeSheet()">Close</button>
+        </div>`;
+      return `
+        <div class="sheet-title">${editing ? 'Edit Expense' : 'Add Expense'}</div>
+        <div class="sheet-body">
+          <div class="field"><label>Description</label><input id="f-exp-title" value="${exp?.title||''}" placeholder="e.g. Lunch at Ouarzazate" autocomplete="off"></div>
+          <div style="display:grid;grid-template-columns:1fr 100px;gap:10px">
+            <div class="field"><label>Amount</label><input id="f-exp-amount" type="number" step="0.01" min="0" value="${exp?.amount||''}" placeholder="0.00" oninput="renderSplitInputs()"></div>
+            <div class="field"><label>Currency</label><select id="f-exp-currency">${currOptions}</select></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field"><label>Date</label><input id="f-exp-date" type="date" value="${exp?.date||today}"></div>
+            <div class="field"><label>Paid by</label><select id="f-exp-paidby">${memberOptions}</select></div>
+          </div>
+          <div class="field"><label>Category</label><select id="f-exp-category">${catOptions}</select></div>
+          <div class="field">
+            <label>Split</label>
+            <div class="split-type-bar">${splitBtns}</div>
+          </div>
+          <div class="field">
+            <label>Participants &amp; amounts</label>
+            <div id="f-exp-splits-container"></div>
+          </div>
+          <div class="field"><label>Note (optional)</label><textarea id="f-exp-note" placeholder="e.g. includes tip">${exp?.note||''}</textarea></div>
+          <button class="btn-primary" onclick="submitExpense()">${editing?'Save Changes':'Add Expense'}</button>
+          ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteExpense(${_editExpenseIdx})">× Delete Expense</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
+
+    case 'settle-form': {
+      const members = appData.members || [];
+      const today = new Date().toISOString().slice(0,10);
+      const base = appData.tripCurrency?.base || 'SGD';
+      const allCurrencies = [base, ...Object.keys(appData.tripCurrency?.rates||{}).filter(c=>c!==base), ...SUPPORTED_CURRENCIES.filter(c=>c!==base&&!appData.tripCurrency?.rates?.[c])];
+      const uniqueCurrencies = [...new Set(allCurrencies)];
+      const pf = _prefillSettle;
+      const fromOpts = members.map(m => `<option value="${m.id}" ${pf?.from===m.id?'selected':''}>${m.name}</option>`).join('');
+      const toOpts   = members.map(m => `<option value="${m.id}" ${pf?.to===m.id?'selected':''}>${m.name}</option>`).join('');
+      const currOpts = uniqueCurrencies.map(c => `<option value="${c}" ${(pf?.currency||base)===c?'selected':''}>${c}</option>`).join('');
+      return `
+        <div class="sheet-title">Record Settlement</div>
+        <div class="sheet-sub">Log a payment made to settle a debt</div>
+        <div class="sheet-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field"><label>Who paid</label><select id="f-settle-from">${fromOpts}</select></div>
+            <div class="field"><label>Paid to</label><select id="f-settle-to">${toOpts}</select></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 100px;gap:10px">
+            <div class="field"><label>Amount</label><input id="f-settle-amount" type="number" step="0.01" min="0" value="${pf?.amount||''}"></div>
+            <div class="field"><label>Currency</label><select id="f-settle-currency">${currOpts}</select></div>
+          </div>
+          <div class="field"><label>Date</label><input id="f-settle-date" type="date" value="${today}"></div>
+          <div class="field"><label>Note (optional)</label><textarea id="f-settle-note" placeholder="e.g. Cash at airport"></textarea></div>
+          <button class="btn-primary" onclick="submitSettlement()">Record Settlement</button>
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
+
+    case 'currency-settings': {
+      const tc = appData.tripCurrency || { base: 'SGD', rates: {} };
+      const rateRows = Object.entries(tc.rates||{}).map(([code, val]) => `
+        <div class="rate-row">
+          <input class="rate-code" value="${code}" style="width:65px;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-size:13px;text-transform:uppercase" autocomplete="off">
+          <span style="color:var(--text3);font-size:12px;flex-shrink:0">per 1 ${tc.base}</span>
+          <input class="rate-val" type="number" step="0.0001" value="${val}" style="flex:1;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-size:13px">
+          <span onclick="this.parentElement.remove()" style="color:var(--danger);cursor:pointer;font-size:20px;padding:0 4px;line-height:1;flex-shrink:0">×</span>
+        </div>`).join('');
+      return `
+        <div class="sheet-title">Exchange Rates</div>
+        <div class="sheet-sub">Set 1 base currency = how many of each foreign currency</div>
+        <div class="sheet-body">
+          <div class="field">
+            <label>Base currency (your home currency)</label>
+            <input id="f-base-currency" value="${tc.base}" placeholder="SGD" style="text-transform:uppercase" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Foreign currencies</label>
+            <div id="rate-rows">${rateRows}</div>
+            <button type="button" onclick="addRateRow()" style="margin-top:8px;font-size:13px;padding:8px 14px;border-radius:8px;border:1px dashed var(--border2);background:none;color:var(--text2);cursor:pointer;width:100%">＋ Add currency</button>
+          </div>
+          <div style="font-size:12px;color:var(--text3);background:var(--card);border-radius:8px;padding:10px;margin-bottom:8px">
+            Example: Base = SGD, MAD = 3.46 means 1 SGD = 3.46 MAD
+          </div>
+          <button class="btn-primary" onclick="submitCurrencySettings()">Save Rates</button>
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
+
+    case 'manage-members': {
+      const members = appData.members || [];
+      const memberList = members.length ? members.map((m, i) => `
+        <div class="member-row">
+          <div class="member-avatar">${m.name.charAt(0).toUpperCase()}</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:500">${m.name}</div>
+            <div style="font-size:11px;color:var(--text3)">${m.userId ? `Telegram ID: ${m.userId}` : 'Manual member'}</div>
+          </div>
+          ${isAdmin ? `<span onclick="deleteMember(${i})" style="color:var(--danger);font-size:20px;cursor:pointer;padding:0 4px;line-height:1">×</span>` : ''}
+        </div>`).join('')
+        : `<div style="color:var(--text3);font-size:13px;padding:8px 0">No members yet. Friends join by opening the Split tab.</div>`;
+      return `
+        <div class="sheet-title">Split Members</div>
+        <div class="sheet-sub">Members who joined by opening the Split tab</div>
+        <div class="sheet-body">
+          <div style="margin-bottom:16px">${memberList}</div>
+          ${isAdmin ? `
+          <div class="field">
+            <label>Add manual member (no Telegram)</label>
+            <input id="f-manual-name" placeholder="e.g. Sarah" autocomplete="off">
+          </div>
+          <button class="btn-primary" onclick="submitManualMember()">Add Member</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Close</button>
+        </div>`;
+    }
+
     default: return '';
   }
 }
@@ -1969,6 +2288,423 @@ function submitEditTrip() {
     document.getElementById('trip-dates').textContent = dates;
     _closeSheet();
     renderTab('more');
+  });
+}
+
+// ── Expense Splitter ──────────────────────────────────────────────────────────
+
+const EXPENSE_CATEGORIES = ['🍽️ Food & Drink','🚗 Transport','🏨 Accommodation','🎭 Activities','🛒 Shopping','💊 Health','📦 Other'];
+const SUPPORTED_CURRENCIES = ['SGD','MAD','EUR','USD','GBP','AUD'];
+
+function _memberName(id) {
+  const m = (appData.members || []).find(m => m.id === id);
+  return m ? m.name : '?';
+}
+function _myMember() {
+  return (appData.members || []).find(m => m.userId === userId) || null;
+}
+function _catIcon(cat) {
+  const map = {'🍽️ Food & Drink':'🍽️','🚗 Transport':'🚗','🏨 Accommodation':'🏨','🎭 Activities':'🎭','🛒 Shopping':'🛒','💊 Health':'💊','📦 Other':'📦'};
+  return map[cat] || '📦';
+}
+function _fmtAmt(amount, currency) {
+  return `${Number(amount).toFixed(2)}<span class="currency-badge">${currency}</span>`;
+}
+
+// ── Balance computation ────────────────────────────────────────────────────────
+function computeSimplifiedDebts() {
+  const members     = appData.members     || [];
+  const expenses    = appData.expenses    || [];
+  const settlements = appData.settlements || [];
+  const rates       = appData.tripCurrency?.rates || {};
+  const base        = appData.tripCurrency?.base  || 'SGD';
+
+  function toBase(amount, currency) {
+    if (currency === base) return amount;
+    const r = rates[currency];
+    return r ? amount * r : amount;
+  }
+
+  const net = {};
+  members.forEach(m => { net[m.id] = 0; });
+
+  expenses.forEach(exp => {
+    const baseAmt = toBase(exp.amount, exp.currency);
+    net[exp.paidBy] = (net[exp.paidBy] || 0) + baseAmt;
+    Object.entries(exp.splits || {}).forEach(([mid, share]) => {
+      net[mid] = (net[mid] || 0) - toBase(share, exp.currency);
+    });
+  });
+
+  settlements.forEach(s => {
+    const baseAmt = toBase(s.amount, s.currency);
+    net[s.fromMember] = (net[s.fromMember] || 0) + baseAmt;
+    net[s.toMember]   = (net[s.toMember]   || 0) - baseAmt;
+  });
+
+  const creditors = [], debtors = [];
+  Object.entries(net).forEach(([id, bal]) => {
+    if (bal >  0.005) creditors.push({ id, amount: bal });
+    if (bal < -0.005) debtors.push({ id, amount: -bal });
+  });
+  creditors.sort((a, b) => b.amount - a.amount);
+  debtors.sort((a, b) => b.amount - a.amount);
+
+  const C = creditors.map(c => ({...c}));
+  const D = debtors.map(d => ({...d}));
+  const debts = [];
+  let ci = 0, di = 0;
+  while (ci < C.length && di < D.length) {
+    const settled = Math.min(C[ci].amount, D[di].amount);
+    if (settled > 0.005) debts.push({ from: D[di].id, to: C[ci].id, amount: settled, currency: base });
+    C[ci].amount -= settled;
+    D[di].amount -= settled;
+    if (C[ci].amount < 0.005) ci++;
+    if (D[di].amount < 0.005) di++;
+  }
+  return { debts, netByMember: net };
+}
+
+// ── renderExpenses ─────────────────────────────────────────────────────────────
+function renderExpenses() {
+  if (!appData.members)      appData.members      = [];
+  if (!appData.expenses)     appData.expenses     = [];
+  if (!appData.settlements)  appData.settlements  = [];
+  if (!appData.tripCurrency) appData.tripCurrency = { base: 'SGD', rates: { MAD: 0.14, EUR: 1.45, USD: 1.35 } };
+
+  // Registration interstitial
+  if (userId && !_myMember()) {
+    return `
+      <div style="padding:50px 20px;text-align:center">
+        <div style="font-size:52px;margin-bottom:16px">💸</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:8px">Join the Split</div>
+        <div style="color:var(--text2);font-size:14px;line-height:1.6;margin-bottom:28px">Set your display name so the group can see who paid what.</div>
+        <button class="btn-primary" onclick="promptMemberRegister()" style="max-width:260px;margin:0 auto;display:block">Set my name</button>
+      </div>`;
+  }
+
+  const base = appData.tripCurrency.base;
+  const { debts, netByMember } = computeSimplifiedDebts();
+  const myMember = _myMember();
+  const myDebts  = myMember ? debts.filter(d => d.from === myMember.id || d.to === myMember.id) : [];
+
+  // ── Balances section ──
+  let balHtml = '';
+  if (!debts.length) {
+    balHtml = `<div style="padding:16px 0 4px;text-align:center;color:var(--text3);font-size:13px">✓ All settled up</div>`;
+  } else {
+    debts.forEach(d => {
+      const isMe = myMember && (d.from === myMember.id || d.to === myMember.id);
+      const cls  = isMe ? (d.from === myMember?.id ? 'you-owe' : 'you-lent') : '';
+      balHtml += `<div class="balance-card ${cls}">
+        <div class="debt-row">
+          <div class="debt-names">
+            ${_memberName(d.from)} <span class="debt-arrow">→ owes →</span> ${_memberName(d.to)}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="debt-amount ${d.from===myMember?.id?'owe':d.to===myMember?.id?'lent':''}">${Number(d.amount).toFixed(2)} ${d.currency}</span>
+            <button class="settle-btn" onclick="quickSettle('${d.from}','${d.to}',${d.amount},'${d.currency}')">Settle →</button>
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+
+  // ── Expenses section ──
+  const expenses = [...(appData.expenses || [])].sort((a, b) => b.date.localeCompare(a.date));
+  let expHtml = '';
+  if (!expenses.length) {
+    expHtml = `<div style="padding:16px 0 4px;text-align:center;color:var(--text3);font-size:13px">No expenses yet — tap ＋ Add</div>`;
+  } else {
+    let lastDate = '';
+    const totalByBase = expenses.reduce((sum, e) => {
+      const r = appData.tripCurrency.rates[e.currency];
+      const converted = e.currency === base ? e.amount : (r ? e.amount * r : e.amount);
+      return sum + converted;
+    }, 0);
+    expenses.forEach((exp, i) => {
+      const realIdx = appData.expenses.indexOf(exp);
+      if (exp.date !== lastDate) {
+        expHtml += `<div class="expense-date-group">${formatDate(exp.date)}</div>`;
+        lastDate = exp.date;
+      }
+      const pCount = (exp.participants || []).length;
+      expHtml += `<div class="expense-row" onclick="editExpense(${realIdx})">
+        <div class="expense-row-icon">${_catIcon(exp.category)}</div>
+        <div class="expense-row-body">
+          <div class="expense-row-title">${exp.title}</div>
+          <div class="expense-row-meta">Paid by ${_memberName(exp.paidBy)} · ${pCount} ${pCount===1?'person':'people'}</div>
+        </div>
+        <div class="expense-row-right">
+          <div class="expense-row-amount">${_fmtAmt(exp.amount, exp.currency)}</div>
+          <div class="expense-row-payer">${exp.splitType}</div>
+        </div>
+      </div>`;
+    });
+  }
+
+  // ── History (settlements) ──
+  const settlements = [...(appData.settlements || [])].sort((a, b) => b.date.localeCompare(a.date));
+  let histHtml = '';
+  if (!settlements.length) {
+    histHtml = `<div style="padding:12px 0 4px;text-align:center;color:var(--text3);font-size:13px">No settlements recorded yet</div>`;
+  } else {
+    settlements.forEach((s, i) => {
+      const realIdx = appData.settlements.indexOf(s);
+      histHtml += `<div class="settle-row">
+        <div class="settle-row-icon">✅</div>
+        <div class="settle-row-body">
+          <div class="settle-row-desc">${_memberName(s.fromMember)} → ${_memberName(s.toMember)}${s.note ? ` · ${s.note}` : ''}</div>
+          <div class="settle-row-date">${formatDate(s.date)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="settle-row-amount">${_fmtAmt(s.amount, s.currency)}</span>
+          <span onclick="deleteSettlement(${realIdx})" style="color:var(--danger);font-size:20px;padding:0 4px;cursor:pointer">×</span>
+        </div>
+      </div>`;
+    });
+  }
+
+  const totalExpenses = appData.expenses.length;
+  const memberCount   = appData.members.length;
+
+  return `
+    <div class="section-head">
+      <span class="section-title">⚖️ Balances</span>
+      ${memberCount < 2 ? '' : `<span class="total-chip">${base}</span>`}
+    </div>
+    ${memberCount < 2
+      ? `<div style="padding:12px 0 4px;text-align:center;color:var(--text3);font-size:13px">${memberCount === 0 ? 'No members yet — open this tab to join' : 'Need at least 2 members to split expenses'}</div>`
+      : balHtml}
+    <div class="section-head" style="margin-top:8px">
+      <span class="section-title">💸 Expenses</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${totalExpenses ? `<span class="total-chip">${totalExpenses} item${totalExpenses!==1?'s':''}</span>` : ''}
+        <button class="btn-add" onclick="addExpense()">＋ Add</button>
+      </div>
+    </div>
+    ${expHtml}
+    <div class="section-head" style="margin-top:8px">
+      <span class="section-title">🤝 Settlements</span>
+      <button class="btn-add" onclick="addSettlement()">＋ Record</button>
+    </div>
+    ${histHtml}
+  `;
+}
+
+// ── Member self-registration ───────────────────────────────────────────────────
+function promptMemberRegister() { openSheet('register-member'); }
+
+function submitMemberRegister() {
+  const name = document.getElementById('f-member-name')?.value.trim();
+  if (!name) { alert('Enter your name'); return; }
+  if (!appData.members) appData.members = [];
+  if (!appData.members.find(m => m.userId === userId)) {
+    appData.members.push({ id: 'm_' + Date.now(), name, userId });
+  }
+  saveData().then(() => { _closeSheet(); renderTab('split'); });
+}
+
+// ── Expense CRUD ───────────────────────────────────────────────────────────────
+let _editExpenseIdx = -1;
+let _splitType = 'equal';
+
+function addExpense()      { _editExpenseIdx = -1; _splitType = 'equal'; openSheet('expense-form'); }
+function editExpense(i)    { _editExpenseIdx = i;  _splitType = (appData.expenses[i]?.splitType || 'equal'); openSheet('expense-form'); }
+
+function deleteExpense(i) {
+  if (!confirm(`Remove "${appData.expenses[i]?.title}"?`)) return;
+  appData.expenses.splice(i, 1);
+  saveData().then(() => { _closeSheet(); renderTab('split'); });
+}
+
+function setSplitType(type) {
+  _splitType = type;
+  document.querySelectorAll('.split-type-btn').forEach(b => b.classList.toggle('selected', b.dataset.type === type));
+  renderSplitInputs();
+}
+
+function renderSplitInputs() {
+  const container = document.getElementById('f-exp-splits-container');
+  if (!container) return;
+  const members  = appData.members || [];
+  const amount   = parseFloat(document.getElementById('f-exp-amount')?.value) || 0;
+  const count    = members.length || 1;
+  const exp      = _editExpenseIdx >= 0 ? appData.expenses[_editExpenseIdx] : null;
+
+  let html = '<div class="split-participants">';
+  members.forEach(m => {
+    const isIn = exp ? (exp.participants || []).includes(m.id) : true;
+    let extra = '';
+    const defaultShare = exp?.splits?.[m.id];
+    if (_splitType === 'exact') {
+      const val = defaultShare ?? (amount / count).toFixed(2);
+      extra = `<input class="split-val-input" data-mid="${m.id}" type="number" step="0.01" value="${val}" style="width:80px;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:8px;color:var(--text);font-size:13px;text-align:right">`;
+    } else if (_splitType === 'percent') {
+      const val = defaultShare ? (defaultShare / amount * 100).toFixed(0) : Math.round(100 / count);
+      extra = `<div style="display:flex;align-items:center;gap:4px"><input class="split-val-input" data-mid="${m.id}" type="number" step="1" min="0" max="100" value="${val}" style="width:55px;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:8px;color:var(--text);font-size:13px;text-align:right"><span style="color:var(--text3);font-size:12px">%</span></div>`;
+    } else if (_splitType === 'shares') {
+      extra = `<div style="display:flex;align-items:center;gap:4px"><input class="split-val-input" data-mid="${m.id}" type="number" step="1" min="1" value="1" style="width:55px;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:8px;color:var(--text);font-size:13px;text-align:right"><span style="color:var(--text3);font-size:12px">shares</span></div>`;
+    } else {
+      // equal — show computed amount read-only
+      extra = `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text3)">${amount && count ? (amount/count).toFixed(2) : '—'}</span>`;
+    }
+    html += `<div class="split-participant-row">
+      <input type="checkbox" class="exp-participant-cb" data-member-id="${m.id}" ${isIn?'checked':''} onchange="renderSplitInputs()" style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
+      <div class="member-avatar">${m.name.charAt(0).toUpperCase()}</div>
+      <span style="flex:1;font-size:14px">${m.name}${m.userId===userId?' (you)':''}</span>
+      ${extra}
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function computeSplitsFromForm(participants, amount) {
+  const splits = {};
+  if (_splitType === 'equal') {
+    const share = amount / participants.length;
+    participants.forEach(mid => { splits[mid] = parseFloat(share.toFixed(2)); });
+    const diff = amount - Object.values(splits).reduce((a, b) => a + b, 0);
+    if (Math.abs(diff) > 0.001 && participants[0]) splits[participants[0]] = parseFloat((splits[participants[0]] + diff).toFixed(2));
+  } else if (_splitType === 'exact') {
+    let total = 0;
+    participants.forEach(mid => {
+      const v = parseFloat(document.querySelector(`.split-val-input[data-mid="${mid}"]`)?.value || 0);
+      splits[mid] = v; total += v;
+    });
+    if (Math.abs(total - amount) > 0.02) { alert(`Exact amounts must sum to ${amount} (currently ${total.toFixed(2)})`); return null; }
+  } else if (_splitType === 'percent') {
+    let totalPct = 0;
+    participants.forEach(mid => {
+      const pct = parseFloat(document.querySelector(`.split-val-input[data-mid="${mid}"]`)?.value || 0);
+      splits[mid] = parseFloat((amount * pct / 100).toFixed(2));
+      totalPct += pct;
+    });
+    if (Math.abs(totalPct - 100) > 1) { alert(`Percentages must sum to 100% (currently ${totalPct}%)`); return null; }
+  } else if (_splitType === 'shares') {
+    let totalShares = 0;
+    const shareVals = {};
+    participants.forEach(mid => {
+      const s = parseFloat(document.querySelector(`.split-val-input[data-mid="${mid}"]`)?.value || 1);
+      shareVals[mid] = s; totalShares += s;
+    });
+    participants.forEach(mid => { splits[mid] = parseFloat((amount * shareVals[mid] / totalShares).toFixed(2)); });
+  }
+  return splits;
+}
+
+function submitExpense() {
+  const title    = document.getElementById('f-exp-title')?.value.trim();
+  const amount   = parseFloat(document.getElementById('f-exp-amount')?.value);
+  const currency = document.getElementById('f-exp-currency')?.value;
+  const date     = document.getElementById('f-exp-date')?.value;
+  const paidBy   = document.getElementById('f-exp-paidby')?.value;
+  const category = document.getElementById('f-exp-category')?.value;
+  const note     = document.getElementById('f-exp-note')?.value.trim() || '';
+
+  if (!title || !amount || isNaN(amount) || !currency || !date || !paidBy) {
+    alert('Title, amount, currency, date and payer are required'); return;
+  }
+
+  const participants = [];
+  document.querySelectorAll('.exp-participant-cb:checked').forEach(cb => participants.push(cb.dataset.memberId));
+  if (!participants.length) { alert('Select at least one participant'); return; }
+
+  const splits = computeSplitsFromForm(participants, amount);
+  if (!splits) return;
+
+  const exp = {
+    id:           _editExpenseIdx >= 0 ? appData.expenses[_editExpenseIdx].id : 'exp_' + Date.now(),
+    title, amount, currency, date, paidBy, participants, splitType: _splitType, splits, category, note
+  };
+
+  if (_editExpenseIdx >= 0) appData.expenses[_editExpenseIdx] = exp;
+  else appData.expenses.push(exp);
+  saveData().then(() => { _closeSheet(); renderTab('split'); });
+}
+
+// ── Settlement CRUD ────────────────────────────────────────────────────────────
+let _editSettleIdx = -1;
+let _prefillSettle = null;
+
+function addSettlement()  { _prefillSettle = null; openSheet('settle-form'); }
+
+function quickSettle(fromId, toId, amount, currency) {
+  _prefillSettle = { from: fromId, to: toId, amount, currency };
+  openSheet('settle-form');
+}
+
+function deleteSettlement(i) {
+  if (!confirm('Remove this settlement record?')) return;
+  appData.settlements.splice(i, 1);
+  saveData().then(() => { _closeSheet(); renderTab('split'); });
+}
+
+function submitSettlement() {
+  const from     = document.getElementById('f-settle-from')?.value;
+  const to       = document.getElementById('f-settle-to')?.value;
+  const amount   = parseFloat(document.getElementById('f-settle-amount')?.value);
+  const currency = document.getElementById('f-settle-currency')?.value;
+  const date     = document.getElementById('f-settle-date')?.value;
+  const note     = document.getElementById('f-settle-note')?.value.trim() || '';
+
+  if (!from || !to || !amount || isNaN(amount) || !currency || !date) { alert('All fields except note are required'); return; }
+  if (from === to) { alert('Payer and receiver must be different'); return; }
+
+  appData.settlements.push({ id: 'settle_' + Date.now(), date, fromMember: from, toMember: to, amount, currency, note });
+  saveData().then(() => { _closeSheet(); renderTab('split'); });
+}
+
+// ── Currency settings ──────────────────────────────────────────────────────────
+function openCurrencySettings() { openSheet('currency-settings'); }
+
+function addRateRow() {
+  const container = document.getElementById('rate-rows');
+  if (!container) return;
+  const base = appData.tripCurrency?.base || 'SGD';
+  const div = document.createElement('div');
+  div.className = 'rate-row';
+  div.innerHTML = `
+    <input class="rate-code" placeholder="EUR" style="width:65px;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-size:13px;text-transform:uppercase" autocomplete="off">
+    <span style="color:var(--text3);font-size:12px">per 1 ${base}</span>
+    <input class="rate-val" type="number" step="0.0001" placeholder="0.68" style="flex:1;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-size:13px">
+    <span onclick="this.parentElement.remove()" style="color:var(--danger);cursor:pointer;font-size:20px;padding:0 4px;line-height:1">×</span>`;
+  container.appendChild(div);
+}
+
+function submitCurrencySettings() {
+  const base = document.getElementById('f-base-currency')?.value.trim().toUpperCase();
+  if (!base) { alert('Base currency code required'); return; }
+  const rates = {};
+  document.querySelectorAll('.rate-row').forEach(row => {
+    const code = row.querySelector('.rate-code')?.value.trim().toUpperCase();
+    const val  = parseFloat(row.querySelector('.rate-val')?.value);
+    if (code && !isNaN(val) && val > 0) rates[code] = val;
+  });
+  appData.tripCurrency = { base, rates };
+  saveData().then(() => { _closeSheet(); renderTab('split'); });
+}
+
+// ── Member management ──────────────────────────────────────────────────────────
+function openManageMembers() { openSheet('manage-members'); }
+
+function submitManualMember() {
+  const name = document.getElementById('f-manual-name')?.value.trim();
+  if (!name) { alert('Name required'); return; }
+  if (!appData.members) appData.members = [];
+  appData.members.push({ id: 'm_' + Date.now(), name, userId: null });
+  saveData().then(() => {
+    document.getElementById('sheet-inner').innerHTML = sheetContent('manage-members');
+  });
+}
+
+function deleteMember(i) {
+  const m = appData.members[i];
+  if (!confirm(`Remove "${m.name}" from the split?`)) return;
+  appData.members.splice(i, 1);
+  saveData().then(() => {
+    document.getElementById('sheet-inner').innerHTML = sheetContent('manage-members');
   });
 }
 
