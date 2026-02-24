@@ -1096,6 +1096,180 @@
     color: var(--gold2);
   }
 
+  /* ── Bulletin board (Info tab) ─────────────────────────────────────────── */
+  .bulletin-board {
+    background: #080e1c;
+    background-image: radial-gradient(circle, #18253d 1px, transparent 1px);
+    background-size: 20px 20px;
+    border-radius: 16px;
+    padding: 14px 12px 12px;
+    margin: 0 -4px 4px;
+  }
+  .bulletin-section { margin-bottom: 18px; }
+  .bulletin-section:last-child { margin-bottom: 4px; }
+  .bulletin-section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--gold2);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+  }
+  .bulletin-section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #ffffff18;
+  }
+  .bulletin-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .bulletin-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s, border-color 0.15s;
+  }
+  .bulletin-card:nth-child(4n+1) { transform: rotate(-0.8deg); }
+  .bulletin-card:nth-child(4n+2) { transform: rotate(0.7deg); }
+  .bulletin-card:nth-child(4n+3) { transform: rotate(-0.3deg); }
+  .bulletin-card:nth-child(4n)   { transform: rotate(0.5deg); }
+  .bulletin-card.drag-src  { opacity: 0.25; transform: rotate(0deg) scale(0.97) !important; }
+  .bulletin-card.drag-over { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-dim); transform: rotate(0deg) scale(1.02) !important; }
+  .bulletin-pin {
+    position: absolute;
+    top: -7px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 14px; line-height: 1;
+  }
+  .bulletin-drag-handle {
+    position: absolute;
+    top: 4px; left: 6px;
+    font-size: 12px;
+    color: var(--text3);
+    touch-action: none;
+    cursor: grab;
+    padding: 2px;
+    display: none;
+  }
+  .bulletin-card-body { padding-top: 8px; }
+  .bulletin-card-icon { font-size: 15px; margin-bottom: 3px; }
+  .bulletin-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  .bulletin-card-content {
+    font-size: 10px;
+    color: var(--text2);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    max-height: 80px;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  }
+  .bulletin-card-link {
+    font-size: 10px;
+    color: var(--gold2);
+    text-decoration: none;
+    word-break: break-all;
+    line-height: 1.4;
+  }
+  .bulletin-card-edit {
+    position: absolute;
+    top: 4px; right: 4px;
+    font-size: 12px;
+    color: var(--text3);
+    cursor: pointer;
+    padding: 2px;
+  }
+  .bulletin-add-card {
+    border: 1.5px dashed var(--border2);
+    border-radius: 10px;
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text3);
+    font-size: 26px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .bulletin-add-card:active { background: var(--card2); }
+
+  /* ── Wishlist scratchpad (Itinerary bottom) ────────────────────────────── */
+  .wishlist-board {
+    background: #080e1c;
+    background-image: radial-gradient(circle, #18253d 1px, transparent 1px);
+    background-size: 20px 20px;
+    border-radius: 16px;
+    padding: 14px 12px 14px;
+    margin: 0 -4px;
+  }
+  .wishlist-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .wishlist-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 10px 6px;
+    position: relative;
+    transition: opacity 0.15s, box-shadow 0.15s;
+  }
+  .wishlist-card:nth-child(3n+1) { transform: rotate(-0.6deg); }
+  .wishlist-card:nth-child(3n+2) { transform: rotate(0.5deg); }
+  .wishlist-card.drag-src        { opacity: 0.25; transform: rotate(0deg) !important; }
+  .wishlist-card-icon  { font-size: 20px; margin-bottom: 4px; }
+  .wishlist-card-name  { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .wishlist-card-note  { font-size: 10px; color: var(--text2); margin-top: 3px; line-height: 1.4; }
+  .wishlist-drag-handle {
+    display: block;
+    text-align: center;
+    color: var(--text3);
+    font-size: 13px;
+    margin-top: 6px;
+    touch-action: none;
+    cursor: grab;
+    letter-spacing: 2px;
+  }
+  .wishlist-add-card {
+    border: 1.5px dashed var(--border2);
+    border-radius: 10px;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text3);
+    font-size: 26px;
+    cursor: pointer;
+  }
+  .wishlist-add-card:active { background: var(--card2); }
+  .wishlist-hint {
+    font-size: 11px;
+    color: var(--text3);
+    text-align: center;
+    padding: 8px 0 0;
+  }
+  /* Day card drop zone */
+  .card.drop-zone-active {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 2px var(--gold-dim) !important;
+  }
+
 </style>
 </head>
 <body>
@@ -1224,6 +1398,7 @@ async function init() {
     if (!appData.settlements)    appData.settlements    = [];
     if (!appData.tripCurrency)   appData.tripCurrency   = { base: 'SGD', rates: { MAD: 0.29, EUR: 1.45, USD: 1.35 } };
     if (!appData.flights)        appData.flights        = [];
+    if (!appData.wishlist)       appData.wishlist       = [];
     // Migrate old links → refs
     if (!appData.refs) appData.refs = [];
     if (!appData.refCats) appData.refCats = [];
@@ -1304,6 +1479,8 @@ function renderTab(tab) {
     case 'split':     div.innerHTML = renderExpenses(); break;
   }
   el.appendChild(div);
+  if (tab === 'refs')      setTimeout(initBulletinDrag, 0);
+  if (tab === 'itinerary') setTimeout(initWishlistDrag, 0);
 }
 
 // ── Itinerary ─────────────────────────────────────────────────────────────────
@@ -1312,46 +1489,77 @@ function renderItinerary() {
     <span class="section-title">Itinerary</span>
     ${isAdmin ? `<button class="btn-add" onclick="addDay()">＋ Day</button>` : ''}
   </div>`;
+
   if (!appData.days.length) {
     html += `<div class="empty"><div class="empty-icon">🗓</div><div class="empty-text">No days yet.<br>${isAdmin ? 'Tap <strong>+ Day</strong> to get started.' : ''}</div></div>`;
-    return html;
-  }
-  const days = [...appData.days].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-  days.forEach((day, di) => {
-    di = appData.days.indexOf(day);
-    const stopCount = day.stops.length;
-    html += `
-    <div class="card" id="day-${day.id}">
-      <div class="card-header" onclick="toggleCard('day-${day.id}')">
-        <div class="card-emoji">${day.emoji}</div>
-        <div class="card-title-group">
-          <div class="card-title">${day.label}</div>
-          <div class="card-sub">${day.title}${stopCount ? ` · ${stopCount} stop${stopCount!==1?'s':''}` : ''}</div>
-        </div>
-        ${isAdmin ? `<div onclick="event.stopPropagation();editDay(${di})" style="color:var(--text3);font-size:15px;cursor:pointer;padding:4px 8px;flex-shrink:0">✏️</div>` : ''}
-        <div class="card-chevron">›</div>
-      </div>
-      <div class="card-body">`;
-    if (day.description) {
-      html += `<div style="padding:10px 16px 6px;font-size:13px;color:var(--text2);line-height:1.5;border-bottom:1px solid var(--border)">${day.description}</div>`;
-    }
-    day.stops.forEach((stop, si) => {
+  } else {
+    const days = [...appData.days].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    days.forEach((day, di) => {
+      di = appData.days.indexOf(day);
+      const stopCount = day.stops.length;
       html += `
-        <div class="stop" ${isAdmin ? `onclick="editStop(${di},${si})" style="cursor:pointer"` : ''}>
-          <div class="stop-time">${stop.time || '—'}</div>
-          <div class="stop-dot"></div>
-          <div class="stop-content">
-            <div class="stop-name">${stop.name}</div>
-            ${stop.note ? `<div class="stop-note">${stop.note}</div>` : ''}
+      <div class="card" id="day-${day.id}">
+        <div class="card-header" onclick="toggleCard('day-${day.id}')">
+          <div class="card-emoji">${day.emoji}</div>
+          <div class="card-title-group">
+            <div class="card-title">${day.label}</div>
+            <div class="card-sub">${day.title}${stopCount ? ` · ${stopCount} stop${stopCount!==1?'s':''}` : ''}</div>
           </div>
-          ${stop.mapsUrl ? `<a href="${stop.mapsUrl}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold2);font-size:16px;text-decoration:none;padding:2px 6px;flex-shrink:0">📍</a>` : ''}
-        </div>`;
+          ${isAdmin ? `<div onclick="event.stopPropagation();editDay(${di})" style="color:var(--text3);font-size:15px;cursor:pointer;padding:4px 8px;flex-shrink:0">✏️</div>` : ''}
+          <div class="card-chevron">›</div>
+        </div>
+        <div class="card-body">`;
+      if (day.description) {
+        html += `<div style="padding:10px 16px 6px;font-size:13px;color:var(--text2);line-height:1.5;border-bottom:1px solid var(--border)">${day.description}</div>`;
+      }
+      day.stops.forEach((stop, si) => {
+        html += `
+          <div class="stop" ${isAdmin ? `onclick="editStop(${di},${si})" style="cursor:pointer"` : ''}>
+            <div class="stop-time">${stop.time || '—'}</div>
+            <div class="stop-dot"></div>
+            <div class="stop-content">
+              <div class="stop-name">${stop.name}</div>
+              ${stop.note ? `<div class="stop-note">${stop.note}</div>` : ''}
+            </div>
+            ${stop.mapsUrl ? `<a href="${stop.mapsUrl}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold2);font-size:16px;text-decoration:none;padding:2px 6px;flex-shrink:0">📍</a>` : ''}
+          </div>`;
+      });
+      if (isAdmin) {
+        html += `<div class="add-stop-row" onclick="addStop(${di})"><span style="font-size:16px">＋</span> Add stop</div>`;
+      }
+      html += `</div></div>`;
     });
-    if (isAdmin) {
-      html += `<div class="add-stop-row" onclick="addStop(${di})"><span style="font-size:16px">＋</span> Add stop</div>`;
-    }
-    html += `</div></div>`;
-  });
+  }
+
+  // ── Places Wishlist scratchpad ──
+  const wishlist = appData.wishlist || [];
+  html += `
+    <div class="section-head" style="margin-top:20px">
+      <span class="section-title">✨ Places Wishlist</span>
+      <button class="btn-add" onclick="addWishlistItem()">＋ Add</button>
+    </div>
+    <div class="wishlist-board">
+      <div class="wishlist-grid" id="wishlist-grid">`;
+  if (!wishlist.length) {
+    html += `<div style="grid-column:1/-1;text-align:center;padding:24px 12px;color:var(--text3);font-size:12px;line-height:1.7">Add places you want to visit.<br>Hold the <strong style="color:var(--text2)">⠿</strong> handle on a card and drag it onto a day to add it to the itinerary.</div>`;
+  } else {
+    wishlist.forEach((item, wi) => {
+      html += `<div class="wishlist-card" data-wi="${wi}">
+        ${isAdmin ? `<div style="position:absolute;top:4px;right:4px;font-size:12px;color:var(--text3);cursor:pointer" onclick="editWishlistItem(${wi})">✏️</div>` : ''}
+        <div class="wishlist-card-icon">${item.emoji || '📍'}</div>
+        <div class="wishlist-card-name">${item.name}</div>
+        ${item.note ? `<div class="wishlist-card-note">${item.note}</div>` : ''}
+        ${isAdmin ? `<div class="wishlist-drag-handle" data-wi="${wi}">⠿</div>` : ''}
+      </div>`;
+    });
+    html += `<div class="wishlist-add-card" onclick="addWishlistItem()">＋</div>`;
+  }
+  html += `</div>`;
+  if (wishlist.length && appData.days.length) {
+    html += `<div class="wishlist-hint">Hold ⠿ on a card · drag it onto a day above</div>`;
+  }
+  html += `</div>`;
+
   return html;
 }
 
@@ -1385,6 +1593,180 @@ function submitDay() {
     appData.days.push({ id: `day-${Date.now()}`, label, title, emoji, date, description, stops: [] });
   }
   appData.days.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  saveData().then(() => { _closeSheet(); renderTab('itinerary'); });
+}
+
+// ── Bulletin board drag-to-reorder ────────────────────────────────────────────
+function initBulletinDrag() {
+  if (!isAdmin) return;
+  let ghost = null, srcEl = null, srcCatId = null;
+  let startX = 0, startY = 0, startRect = null;
+
+  function nearestCard(x, y) {
+    for (const el of document.elementsFromPoint(x, y)) {
+      const c = el.closest('.bulletin-card[data-ref-id]');
+      if (c) return c;
+    }
+    return null;
+  }
+
+  document.querySelectorAll('.bulletin-drag-handle[data-ref-id]').forEach(handle => {
+    handle.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
+      srcEl = handle.closest('.bulletin-card');
+      srcCatId = srcEl?.dataset.catId;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startRect = srcEl?.getBoundingClientRect();
+    }, { passive: true });
+
+    handle.addEventListener('touchmove', e => {
+      if (!srcEl) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (!ghost && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+        ghost = srcEl.cloneNode(true);
+        Object.assign(ghost.style, {
+          position:'fixed', pointerEvents:'none', zIndex:'9999',
+          width: srcEl.offsetWidth + 'px',
+          left: startRect.left + 'px', top: startRect.top + 'px',
+          opacity:'0.9', transform:'rotate(-2deg) scale(1.06)',
+          boxShadow:'0 8px 24px rgba(0,0,0,0.5)',
+          border:'1px solid var(--gold)', transition:'none'
+        });
+        document.body.appendChild(ghost);
+        srcEl.classList.add('drag-src');
+      }
+      if (ghost) {
+        e.preventDefault();
+        ghost.style.left = (startRect.left + dx) + 'px';
+        ghost.style.top  = (startRect.top  + dy) + 'px';
+        const target = nearestCard(e.touches[0].clientX, e.touches[0].clientY);
+        document.querySelectorAll('.bulletin-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+        if (target && target !== srcEl && target.dataset.catId === srcCatId) target.classList.add('drag-over');
+      }
+    }, { passive: false });
+
+    handle.addEventListener('touchend', e => {
+      if (!srcEl) return;
+      ghost?.remove(); ghost = null;
+      srcEl.classList.remove('drag-src');
+      document.querySelectorAll('.bulletin-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+      const t = e.changedTouches[0];
+      const target = nearestCard(t.clientX, t.clientY);
+      if (target && target !== srcEl && target.dataset.refId && target.dataset.catId === srcCatId) {
+        const refs = appData.refs;
+        const si = refs.findIndex(r => r.id === srcEl.dataset.refId);
+        const ti = refs.findIndex(r => r.id === target.dataset.refId);
+        if (si >= 0 && ti >= 0 && si !== ti) {
+          const [item] = refs.splice(si, 1);
+          refs.splice(ti, 0, item);
+          saveData().then(() => renderTab('refs'));
+        }
+      }
+      srcEl = null; srcCatId = null;
+    });
+  });
+}
+
+// ── Wishlist drag-to-day ────────────────────────────────────────────────────────
+let _wishlistPrefill = null;
+
+function initWishlistDrag() {
+  let ghost = null, srcEl = null, srcWi = -1;
+  let startX = 0, startY = 0, startRect = null;
+
+  function dayCardAt(x, y) {
+    for (const el of document.elementsFromPoint(x, y)) {
+      const c = el.closest('.card[id^="day-"]');
+      if (c) return c;
+    }
+    return null;
+  }
+
+  document.querySelectorAll('.wishlist-drag-handle[data-wi]').forEach(handle => {
+    handle.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
+      srcEl = handle.closest('.wishlist-card');
+      srcWi = parseInt(handle.dataset.wi);
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startRect = srcEl?.getBoundingClientRect();
+    }, { passive: true });
+
+    handle.addEventListener('touchmove', e => {
+      if (!srcEl) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (!ghost && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+        ghost = srcEl.cloneNode(true);
+        Object.assign(ghost.style, {
+          position:'fixed', pointerEvents:'none', zIndex:'9999',
+          width: srcEl.offsetWidth + 'px',
+          left: startRect.left + 'px', top: startRect.top + 'px',
+          opacity:'0.92', transform:'rotate(-3deg) scale(1.1)',
+          boxShadow:'0 12px 32px rgba(0,0,0,0.55)', transition:'none'
+        });
+        document.body.appendChild(ghost);
+        srcEl.classList.add('drag-src');
+        document.querySelectorAll('.card[id^="day-"]').forEach(c => c.classList.add('drop-zone-active'));
+      }
+      if (ghost) {
+        e.preventDefault();
+        ghost.style.left = (startRect.left + dx) + 'px';
+        ghost.style.top  = (startRect.top  + dy) + 'px';
+      }
+    }, { passive: false });
+
+    handle.addEventListener('touchend', e => {
+      if (!srcEl) return;
+      ghost?.remove(); ghost = null;
+      srcEl.classList.remove('drag-src');
+      document.querySelectorAll('.card[id^="day-"]').forEach(c => c.classList.remove('drop-zone-active'));
+      const t = e.changedTouches[0];
+      const dayCard = dayCardAt(t.clientX, t.clientY);
+      if (dayCard && srcWi >= 0) {
+        const dayId = dayCard.id.replace('day-', '');
+        const di = appData.days.findIndex(d => d.id === dayId);
+        if (di >= 0) dropWishlistOnDay(srcWi, di);
+      }
+      srcEl = null; srcWi = -1;
+    });
+  });
+}
+
+function dropWishlistOnDay(wi, di) {
+  const item = (appData.wishlist || [])[wi];
+  if (!item) return;
+  _wishlistPrefill = item;
+  _editStopDayIdx = di;
+  _editStopIdx = -1;
+  openSheet('stop-form');
+}
+
+// ── Wishlist CRUD ──────────────────────────────────────────────────────────────
+let _editWishIdx = -1;
+
+function addWishlistItem()      { _editWishIdx = -1; openSheet('wishlist-form'); }
+function editWishlistItem(i)    { _editWishIdx = i;  openSheet('wishlist-form'); }
+
+function deleteWishlistItem(i) {
+  if (!confirm('Remove from wishlist?')) return;
+  (appData.wishlist || []).splice(i, 1);
+  saveData().then(() => { _closeSheet(); renderTab('itinerary'); });
+}
+
+function submitWishlistItem() {
+  const name  = document.getElementById('f-name')?.value.trim();
+  if (!name) { alert('Name is required'); return; }
+  const emoji   = document.getElementById('f-emoji')?.value.trim()   || '📍';
+  const note    = document.getElementById('f-notes')?.value.trim()   || '';
+  let mapsUrl   = document.getElementById('f-stopmaps')?.value.trim()|| '';
+  if (mapsUrl && !mapsUrl.match(/^https?:\/\//i)) mapsUrl = 'https://' + mapsUrl;
+  const item = { id: 'wish_' + Date.now(), name, emoji, note, mapsUrl };
+  if (!appData.wishlist) appData.wishlist = [];
+  if (_editWishIdx >= 0) appData.wishlist[_editWishIdx] = item;
+  else appData.wishlist.push(item);
   saveData().then(() => { _closeSheet(); renderTab('itinerary'); });
 }
 
@@ -1707,58 +2089,64 @@ async function submitWxLoc() {
 function renderRefs() {
   const refs = appData.refs || [];
   const cats = appData.refCats || [];
-  let html = `<div class="section-head">
-    <span class="section-title">Info</span>
+
+  const header = `<div class="section-head">
+    <span class="section-title">Info Board</span>
     ${isAdmin ? `<button class="btn-add" onclick="addRefCat()">＋ Category</button>` : ''}
   </div>`;
 
-  // Group items by category
-  const bycat = {};
-  refs.forEach(r => {
-    const k = r.cat || 'uncategorized';
-    if (!bycat[k]) bycat[k] = [];
-    bycat[k].push(r);
-  });
-
-  // Named categories as collapsible cards with embedded add row
-  cats.forEach((cat, ci) => {
-    const items = bycat[cat.id] || [];
-    html += `<div class="card open" id="refcat-${cat.id}">
-      <div class="card-header" onclick="toggleCard('refcat-${cat.id}')">
-        <div class="card-emoji">${cat.icon}</div>
-        <div class="card-title-group">
-          <div class="card-title">${cat.label}</div>
-          <div class="card-sub">${items.length} item${items.length!==1?'s':''}</div>
-        </div>
-        ${isAdmin ? `<div onclick="event.stopPropagation();editRefCat(${ci})" style="color:var(--text3);font-size:15px;cursor:pointer;padding:4px 8px;flex-shrink:0">✏️</div>` : ''}
-        <div class="card-chevron">›</div>
-      </div>
-      <div class="card-body">`;
-    if (!items.length) {
-      html += `<div style="padding:12px 16px;color:var(--text3);font-size:13px">No items yet</div>`;
-    }
-    items.forEach(r => { html += _refRow(r); });
-    if (isAdmin) html += `<div class="add-stop-row" onclick="addRef('${cat.id}')"><span style="font-size:16px">＋</span> Add item</div>`;
-    html += `</div></div>`;
-  });
-
-  // Uncategorized items
-  const uncat = bycat['uncategorized'] || [];
-  if (!cats.length) {
-    // No categories — flat list with add row at bottom
-    if (!uncat.length) {
-      html += `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nothing here yet.<br>${isAdmin ? 'Tap <strong>+ Category</strong> to organise, or add items directly.' : 'Admin will add info here.'}</div></div>`;
-    } else {
-      uncat.forEach(r => { html += _refRow(r); });
-    }
-    if (isAdmin) html += `<div class="add-stop-row" style="border:1px solid var(--border);border-radius:12px;margin-top:2px" onclick="addRef('uncategorized')"><span style="font-size:16px">＋</span> Add item</div>`;
-  } else if (uncat.length) {
-    html += `<div class="section-head" style="margin-top:8px"><span class="section-title">Other</span></div>`;
-    uncat.forEach(r => { html += _refRow(r); });
-    if (isAdmin) html += `<div class="add-stop-row" style="border:1px solid var(--border);border-radius:12px;margin-top:2px" onclick="addRef('uncategorized')"><span style="font-size:16px">＋</span> Add item</div>`;
+  if (!cats.length && !refs.length) {
+    return header + `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nothing here yet.<br>${isAdmin ? 'Tap <strong>＋ Category</strong> to get started.' : 'Admin will add info here.'}</div></div>`;
   }
 
-  return html;
+  function _bulletinCard(r) {
+    const ri = refs.indexOf(r);
+    const typeIcon = r.type === 'link' ? '🔗' : r.type === 'file' ? '📎' : '📝';
+    let contentHtml = '';
+    if (r.type === 'note' && r.content) {
+      contentHtml = `<div class="bulletin-card-content">${r.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>`;
+    } else if (r.type === 'link' && r.url) {
+      contentHtml = `<a class="bulletin-card-link" href="${r.url}" target="_blank" onclick="event.stopPropagation()">${r.url.replace(/^https?:\/\//,'')}</a>`;
+    }
+    return `<div class="bulletin-card" data-ref-id="${r.id}" data-cat-id="${r.cat||'uncategorized'}" ${isAdmin ? `onclick="editRef(${ri})"` : ''} style="${isAdmin ? 'cursor:pointer' : ''}">
+      <div class="bulletin-pin">📌</div>
+      ${isAdmin ? `<div class="bulletin-drag-handle" data-ref-id="${r.id}">⠿</div>` : ''}
+      ${isAdmin ? `<div class="bulletin-card-edit" onclick="event.stopPropagation();editRef(${ri})">✏️</div>` : ''}
+      <div class="bulletin-card-body">
+        <div class="bulletin-card-icon">${typeIcon}</div>
+        <div class="bulletin-card-title">${r.name}</div>
+        ${contentHtml}
+      </div>
+    </div>`;
+  }
+
+  let boardHtml = '<div class="bulletin-board">';
+
+  cats.forEach((cat, ci) => {
+    const catRefs = refs.filter(r => (r.cat || r.catId) === cat.id);
+    boardHtml += `<div class="bulletin-section" data-cat-id="${cat.id}">
+      <div class="bulletin-section-label">
+        ${cat.icon} ${cat.label}
+        ${isAdmin ? `<span onclick="editRefCat(${ci})" style="letter-spacing:0;text-transform:none;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;color:var(--text3)">✏️</span>` : ''}
+      </div>
+      <div class="bulletin-grid" id="bgrid-${cat.id}">`;
+    catRefs.forEach(r => { boardHtml += _bulletinCard(r); });
+    if (isAdmin) boardHtml += `<div class="bulletin-add-card" onclick="addRef('${cat.id}')">＋</div>`;
+    boardHtml += `</div></div>`;
+  });
+
+  const uncat = refs.filter(r => !r.cat || r.cat === 'uncategorized');
+  if (uncat.length || (!cats.length && isAdmin)) {
+    boardHtml += `<div class="bulletin-section" data-cat-id="uncategorized">
+      <div class="bulletin-section-label">📌 Other</div>
+      <div class="bulletin-grid" id="bgrid-uncategorized">`;
+    uncat.forEach(r => { boardHtml += _bulletinCard(r); });
+    if (isAdmin) boardHtml += `<div class="bulletin-add-card" onclick="addRef('uncategorized')">＋</div>`;
+    boardHtml += `</div></div>`;
+  }
+
+  boardHtml += '</div>';
+  return header + boardHtml;
 }
 
 function _refRow(r) {
@@ -2234,10 +2622,30 @@ function sheetContent(type) {
         </div>`;
     }
 
+    case 'wishlist-form': {
+      const editing = _editWishIdx >= 0;
+      const item = editing ? (appData.wishlist||[])[_editWishIdx] : null;
+      return `
+        <div class="sheet-title">${editing ? 'Edit Place' : 'Add to Wishlist'}</div>
+        <div class="sheet-body">
+          <div style="display:grid;grid-template-columns:56px 1fr;gap:10px">
+            <div class="field"><label>Emoji</label><input id="f-emoji" value="${item?.emoji||'📍'}" style="text-align:center;font-size:20px" maxlength="2" autocomplete="off"></div>
+            <div class="field"><label>Place Name</label><input id="f-name" value="${item?.name||''}" placeholder="Jemaa el-Fnaa, Sunset point…" autocomplete="off"></div>
+          </div>
+          <div class="field"><label>Google Maps URL (optional)</label><input id="f-stopmaps" type="url" value="${item?.mapsUrl||''}" placeholder="https://maps.app.goo.gl/…"></div>
+          <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Visit at sunset, try the mint tea…">${item?.note||''}</textarea></div>
+          <button class="btn-primary" onclick="submitWishlistItem()">${editing ? 'Save Changes' : 'Add to Wishlist'}</button>
+          ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteWishlistItem(${_editWishIdx})">× Remove</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
+
     case 'stop-form': {
       const editing = _editStopIdx >= 0;
       const day  = appData.days[_editStopDayIdx];
       const stop = editing ? day?.stops[_editStopIdx] : null;
+      const pre  = !editing ? _wishlistPrefill : null;
+      _wishlistPrefill = null;
       const accomOpts = appData.accoms.map((a,i) => `<option value="${i}">${a.name}</option>`).join('');
       return `
         <div class="sheet-title">${editing ? 'Edit Stop' : 'Add Stop'}</div>
@@ -2251,10 +2659,10 @@ function sheetContent(type) {
               ${accomOpts}
             </select>
           </div>` : ''}
-          <div class="field"><label>Stop Name</label><input id="f-name" value="${stop?.name || ''}" placeholder="Hotel check-in, Dinner, Trailhead…" autocomplete="off"></div>
+          <div class="field"><label>Stop Name</label><input id="f-name" value="${stop?.name || pre?.name || ''}" placeholder="Hotel check-in, Dinner, Trailhead…" autocomplete="off"></div>
           <div class="field"><label>Time</label><input id="f-time" type="time" value="${stop?.time || ''}"></div>
-          <div class="field"><label>Google Maps URL (optional)</label><input id="f-stopmaps" type="url" value="${stop?.mapsUrl || ''}" placeholder="https://maps.app.goo.gl/…"></div>
-          <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Reserve in advance, checkout 11am…">${stop?.note || ''}</textarea></div>
+          <div class="field"><label>Google Maps URL (optional)</label><input id="f-stopmaps" type="url" value="${stop?.mapsUrl || pre?.mapsUrl || ''}" placeholder="https://maps.app.goo.gl/…"></div>
+          <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Reserve in advance, checkout 11am…">${stop?.note || pre?.note || ''}</textarea></div>
           <button class="btn-primary" onclick="submitStop()">${editing ? 'Save Changes' : 'Add Stop'}</button>
           ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteStop(${_editStopDayIdx},${_editStopIdx})">× Remove Stop</button>` : ''}
           <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
