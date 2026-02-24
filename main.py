@@ -16,11 +16,12 @@ logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "")
 # To this:
-_raw_url = os.environ.get("WEB_APP_URL", "").rstrip("/")
-if _raw_url and not _raw_url.startswith("http"):
-    WEB_APP_URL = f"https://{_raw_url}"
+# Ensure the protocol is prepended if missing
+raw_url = os.environ.get("WEB_APP_URL", "").rstrip("/")
+if raw_url and not raw_url.startswith("http"):
+    WEB_APP_URL = f"https://{raw_url}"
 else:
-    WEB_APP_URL = _raw_url
+    WEB_APP_URL = raw_url
 DATA_FILE  = Path("data.json")
 
 
