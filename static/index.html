@@ -936,7 +936,10 @@ function sheetContent(type) {
       <div class="sheet-body">
         <div class="field"><label>Name</label><input id="f-name" placeholder="Airbnb Arenas, Hotel Rural..." autocomplete="off"></div>
         <div class="field"><label>Booking URL</label><input id="f-url" type="url" placeholder="https://airbnb.com/rooms/..."></div>
-        <div class="field"><label>Nights</label><input id="f-day" placeholder="Fri-Sat, All nights..." autocomplete="off"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field"><label>Check-in</label><input id="f-checkin" type="date"></div>
+          <div class="field"><label>Check-out</label><input id="f-checkout" type="date"></div>
+        </div>
         <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Checkout 11am, Free parking, Contact..."></textarea></div>
         <button class="btn-primary" onclick="submitAccom()">Save Booking</button>
         <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
@@ -1015,13 +1018,24 @@ function selectDay(el) {
 }
 
 // ── Submit handlers ───────────────────────────────────────────────────────────
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
 function submitAccom() {
   const name = document.getElementById('f-name')?.value.trim();
-  const url  = document.getElementById('f-url')?.value.trim();
+  let url    = document.getElementById('f-url')?.value.trim();
   if (!name || !url) { alert('Name and URL are required'); return; }
+  if (!url.match(/^https?:\/\//i)) url = 'https://' + url;
+  const checkin  = document.getElementById('f-checkin')?.value;
+  const checkout = document.getElementById('f-checkout')?.value;
+  let day = '';
+  if (checkin && checkout) day = formatDate(checkin) + ' – ' + formatDate(checkout);
+  else if (checkin) day = formatDate(checkin);
   appData.accoms.push({
-    name, url,
-    day:   document.getElementById('f-day')?.value.trim() || '',
+    name, url, day,
     notes: document.getElementById('f-notes')?.value.trim() || ''
   });
   saveData().then(() => { _closeSheet(); renderTab('accoms'); });
