@@ -119,25 +119,28 @@ ptb_app = Application.builder().token(BOT_TOKEN).build()
 
 # --- Around line 125: Fix the Start Command ---
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Log the URL being used to the console so we can see it in Railway logs
-    logging.info(f"Using WebApp URL: {WEB_APP_URL}")
+    # 1. Log to be 100% sure
+    logging.info(f"DEBUG: Sending button with URL: {WEB_APP_URL}")
 
-    if not WEB_APP_URL:
-        await update.message.reply_text("❌ Error: WEB_APP_URL is not set.")
-        return
+    # 2. Create the WebAppInfo object explicitly
+    web_app_info = WebAppInfo(url=WEB_APP_URL)
 
-    kb = InlineKeyboardMarkup([[
-        InlineKeyboardButton(
-            text="🏔 Open Trip Planner", 
-            web_app=WebAppInfo(url=WEB_APP_URL)
+    # 3. Build the keyboard
+    # IMPORTANT: Ensure 'web_app' is the ONLY argument besides 'text'
+    button = InlineKeyboardButton(text="🏔 Open Trip Planner", web_app=web_app_info)
+    keyboard = InlineKeyboardMarkup([[button]])
+    
+    try:
+        await update.message.reply_text(
+            "Welcome! Click below to launch the app.",
+            reply_markup=keyboard
         )
-    ]])
-    
-    await update.message.reply_text(
-        "Welcome! Tap the button below to plan your trip:",
-        reply_markup=kb
-    )
-    
+    except Exception as e:
+        logging.error(f"Failed to send message: {e}")
+        # Fallback message without the button so the bot doesn't just stay silent
+        await update.message.reply_text(f"Error launching Mini App. Please check logs.")
+
+
 async def cmd_myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     data = load_data()
