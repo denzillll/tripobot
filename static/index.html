@@ -714,6 +714,14 @@ if (tg) { tg.expand(); tg.ready(); }
 
 const userId = tg?.initDataUnsafe?.user?.id || null;
 
+// Each Telegram group chat gets its own isolated trip.
+// chat.id = group; user.id = DM fallback; 'default' = local dev.
+const chatId = String(
+  tg?.initDataUnsafe?.chat?.id ||
+  tg?.initDataUnsafe?.user?.id ||
+  'default'
+);
+
 let appData = null;
 let isAdmin = false;
 let activeTab = 'itinerary';
@@ -726,8 +734,8 @@ function setPersonalProgress(d){ localStorage.setItem('personal_prog_'+(userId||
 async function init() {
   try {
     const [dataRes, adminRes] = await Promise.all([
-      fetch('/api/data').then(r => r.json()),
-      userId ? fetch(`/api/is_admin?user_id=${userId}`).then(r => r.json()) : Promise.resolve({is_admin: false})
+      fetch(`/api/data?chat_id=${encodeURIComponent(chatId)}`).then(r => r.json()),
+      userId ? fetch(`/api/is_admin?user_id=${userId}&chat_id=${encodeURIComponent(chatId)}`).then(r => r.json()) : Promise.resolve({is_admin: false})
     ]);
     appData = dataRes;
     // Migrate old flat checklist → groupChecklist array
@@ -751,7 +759,7 @@ async function init() {
 }
 
 async function saveData() {
-  await fetch('/api/data', {
+  await fetch(`/api/data?chat_id=${encodeURIComponent(chatId)}`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(appData)
