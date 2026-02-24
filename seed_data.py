@@ -270,10 +270,13 @@ def main():
     fpath = data_file(args.chat_id)
 
     if fpath.exists() and not args.force:
-        ans = input(f"⚠️  {fpath} already exists. Overwrite? [y/N] ").strip().lower()
-        if ans != "y":
-            print("Aborted.")
-            return
+        import sys
+        if sys.stdin.isatty():
+            ans = input(f"⚠️  {fpath} already exists. Overwrite? [y/N] ").strip().lower()
+            if ans != "y":
+                print("Aborted.")
+                return
+        # Non-interactive (Railway shell, CI, etc.) — overwrite silently
 
     with open(fpath, "w", encoding="utf-8") as f:
         json.dump(TRIP_DATA, f, indent=2, ensure_ascii=False)
