@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, MenuButtonWebApp, WebAppInfo
 from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram import ReplyKeyboardMarkup, KeyboardButton
 
 logging.basicConfig(level=logging.INFO)
 
@@ -119,27 +120,17 @@ ptb_app = Application.builder().token(BOT_TOKEN).build()
 
 # --- Around line 125: Fix the Start Command ---
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 1. Log to be 100% sure
-    logging.info(f"DEBUG: Sending button with URL: {WEB_APP_URL}")
-
-    # 2. Create the WebAppInfo object explicitly
-    web_app_info = WebAppInfo(url=WEB_APP_URL)
-
-    # 3. Build the keyboard
-    # IMPORTANT: Ensure 'web_app' is the ONLY argument besides 'text'
-    button = InlineKeyboardButton(text="🏔 Open Trip Planner", web_app=web_app_info)
-    keyboard = InlineKeyboardMarkup([[button]])
+    logging.info(f"DEBUG: Using URL {WEB_APP_URL}")
     
-    try:
-        await update.message.reply_text(
-            "Welcome! Click below to launch the app.",
-            reply_markup=keyboard
-        )
-    except Exception as e:
-        logging.error(f"Failed to send message: {e}")
-        # Fallback message without the button so the bot doesn't just stay silent
-        await update.message.reply_text(f"Error launching Mini App. Please check logs.")
-
+    # Use a Reply Keyboard instead of an Inline Keyboard
+    kb = ReplyKeyboardMarkup([
+        [KeyboardButton(text="🏔 Open Trip Planner", web_app=WebAppInfo(url=WEB_APP_URL))]
+    ], resize_keyboard=True)
+    
+    await update.message.reply_text(
+        "Welcome! Use the button below to launch the planner.",
+        reply_markup=kb
+    )
 
 async def cmd_myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
