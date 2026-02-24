@@ -772,6 +772,7 @@ function renderAccoms() {
         ${a.notes ? `<span class="badge">📝 ${a.notes}</span>` : ''}
       </div>
       <a class="accom-link" href="${a.url}" target="_blank">🔗 Open booking ↗</a>
+      ${a.mapsUrl ? `<a class="accom-link" href="${a.mapsUrl}" target="_blank">📍 Open in Maps ↗</a>` : ''}
       ${isAdmin ? `<div onclick="deleteAccom(${i})" style="color:var(--danger);font-size:12px;font-weight:600;cursor:pointer;margin-top:4px;padding:2px 0">× Remove</div>` : ''}
     </div>`;
   });
@@ -940,6 +941,7 @@ function sheetContent(type) {
           <div class="field"><label>Check-in</label><input id="f-checkin" type="date"></div>
           <div class="field"><label>Check-out</label><input id="f-checkout" type="date"></div>
         </div>
+        <div class="field"><label>Google Maps URL (optional)</label><input id="f-maps" type="url" placeholder="https://maps.app.goo.gl/..."></div>
         <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Checkout 11am, Free parking, Contact..."></textarea></div>
         <button class="btn-primary" onclick="submitAccom()">Save Booking</button>
         <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
@@ -1034,8 +1036,10 @@ function submitAccom() {
   let day = '';
   if (checkin && checkout) day = formatDate(checkin) + ' – ' + formatDate(checkout);
   else if (checkin) day = formatDate(checkin);
+  let mapsUrl = document.getElementById('f-maps')?.value.trim() || '';
+  if (mapsUrl && !mapsUrl.match(/^https?:\/\//i)) mapsUrl = 'https://' + mapsUrl;
   appData.accoms.push({
-    name, url, day,
+    name, url, day, mapsUrl,
     notes: document.getElementById('f-notes')?.value.trim() || ''
   });
   saveData().then(() => { _closeSheet(); renderTab('accoms'); });
