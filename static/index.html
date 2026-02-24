@@ -906,6 +906,95 @@
   .split-participant-row:last-child { border-bottom: none; }
   .rate-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 
+  /* ── Split tab redesign ─────────────────────────────────────────────────── */
+  .split-summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .split-summary-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .split-summary-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .split-summary-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .split-summary-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+  .split-search-wrap {
+    position: relative;
+    margin: 8px 0 10px;
+  }
+  .split-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    pointer-events: none;
+    line-height: 1;
+  }
+  .split-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 14px 9px 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    background: var(--card);
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+  }
+  .split-search-input:focus { border-color: var(--gold); }
+  .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    user-select: none;
+  }
+  .debt-avatar {
+    display: inline-flex;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    font-size: 10px;
+    font-weight: 700;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    vertical-align: middle;
+  }
+  .debt-avatar--to {
+    background: var(--gold-dim);
+    border-color: var(--gold);
+    color: var(--gold2);
+  }
+
 </style>
 </head>
 <body>
@@ -2386,52 +2475,80 @@ function renderExpenses() {
   }
 
   const base = appData.tripCurrency.base;
-  const { debts, netByMember } = computeSimplifiedDebts();
+  const { debts } = computeSimplifiedDebts();
   const myMember = _myMember();
-  const myDebts  = myMember ? debts.filter(d => d.from === myMember.id || d.to === myMember.id) : [];
+  const myId = myMember?.id || '';
 
-  // ── Balances section ──
-  let balHtml = '';
-  if (!debts.length) {
-    balHtml = `<div style="padding:16px 0 4px;text-align:center;color:var(--text3);font-size:13px">✓ All settled up</div>`;
+  function toBase(amount, currency) {
+    if (currency === base) return amount;
+    const r = appData.tripCurrency.rates[currency];
+    return r ? amount * r : amount;
+  }
+
+  // ── Summary totals ──
+  const groupTotal = (appData.expenses || []).reduce((sum, e) => sum + toBase(e.amount, e.currency), 0);
+  const myTotal = (appData.expenses || []).reduce((sum, e) => {
+    const mySplit = myId && e.splits && e.splits[myId] != null ? e.splits[myId] : 0;
+    return sum + toBase(mySplit, e.currency);
+  }, 0);
+
+  const summaryHtml = `
+    <div class="split-summary-grid">
+      <div class="split-summary-card">
+        <div class="split-summary-label">Group Total</div>
+        <div class="split-summary-value">${base} ${groupTotal.toFixed(2)}</div>
+        <div class="split-summary-sub">${appData.expenses.length} expense${appData.expenses.length!==1?'s':''}</div>
+      </div>
+      <div class="split-summary-card">
+        <div class="split-summary-label">Your Share</div>
+        <div class="split-summary-value">${myId ? `${base} ${myTotal.toFixed(2)}` : '—'}</div>
+        <div class="split-summary-sub">${myId ? 'of group total' : 'not joined'}</div>
+      </div>
+    </div>`;
+
+  // ── Outstanding Debts ──
+  const myDebtCount = myId ? debts.filter(d => d.from === myId || d.to === myId).length : 0;
+  let debtRowsHtml = '';
+  if (appData.members.length < 2) {
+    debtRowsHtml = `<div style="padding:12px 0 4px;text-align:center;color:var(--text3);font-size:13px">${appData.members.length === 0 ? 'No members yet' : 'Need at least 2 members'}</div>`;
+  } else if (!debts.length) {
+    debtRowsHtml = `<div style="padding:12px 0 4px;text-align:center;color:var(--text3);font-size:13px">✓ All settled up</div>`;
   } else {
     debts.forEach(d => {
-      const isMe = myMember && (d.from === myMember.id || d.to === myMember.id);
-      const cls  = isMe ? (d.from === myMember?.id ? 'you-owe' : 'you-lent') : '';
-      balHtml += `<div class="balance-card ${cls}">
-        <div class="debt-row">
-          <div class="debt-names">
-            ${_memberName(d.from)} <span class="debt-arrow">→ owes →</span> ${_memberName(d.to)}
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="debt-amount ${d.from===myMember?.id?'owe':d.to===myMember?.id?'lent':''}">${Number(d.amount).toFixed(2)} ${d.currency}</span>
-            <button class="settle-btn" onclick="quickSettle('${d.from}','${d.to}',${d.amount},'${d.currency}')">Settle →</button>
-          </div>
+      const amtCls = d.from === myId ? 'owe' : d.to === myId ? 'lent' : '';
+      debtRowsHtml += `<div class="debt-row" data-from="${d.from}" data-to="${d.to}">
+        <div class="debt-names">
+          <span class="debt-avatar">${_memberName(d.from).charAt(0).toUpperCase()}</span>
+          ${_memberName(d.from)}
+          <span class="debt-arrow">owes</span>
+          <span class="debt-avatar debt-avatar--to">${_memberName(d.to).charAt(0).toUpperCase()}</span>
+          ${_memberName(d.to)}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="debt-amount ${amtCls}">${Number(d.amount).toFixed(2)} ${d.currency}</span>
+          <button class="settle-btn" onclick="quickSettle('${d.from}','${d.to}',${d.amount},'${d.currency}')">Settle →</button>
         </div>
       </div>`;
     });
   }
 
-  // ── Expenses section ──
+  // ── Expenses ──
   const expenses = [...(appData.expenses || [])].sort((a, b) => b.date.localeCompare(a.date));
   let expHtml = '';
   if (!expenses.length) {
-    expHtml = `<div style="padding:16px 0 4px;text-align:center;color:var(--text3);font-size:13px">No expenses yet — tap ＋ Add</div>`;
+    expHtml = `<div style="padding:24px 0;text-align:center;color:var(--text3);font-size:13px">No expenses yet — tap ＋ Add</div>`;
   } else {
     let lastDate = '';
-    const totalByBase = expenses.reduce((sum, e) => {
-      const r = appData.tripCurrency.rates[e.currency];
-      const converted = e.currency === base ? e.amount : (r ? e.amount * r : e.amount);
-      return sum + converted;
-    }, 0);
-    expenses.forEach((exp, i) => {
+    expenses.forEach(exp => {
       const realIdx = appData.expenses.indexOf(exp);
+      const titleLower = (exp.title || '').toLowerCase();
       if (exp.date !== lastDate) {
         expHtml += `<div class="expense-date-group">${formatDate(exp.date)}</div>`;
         lastDate = exp.date;
       }
       const pCount = (exp.participants || []).length;
-      expHtml += `<div class="expense-row" onclick="editExpense(${realIdx})">
+      const myShare = myId && exp.splits && exp.splits[myId] != null ? exp.splits[myId] : null;
+      expHtml += `<div class="expense-row" data-title="${titleLower}" onclick="editExpense(${realIdx})">
         <div class="expense-row-icon">${_catIcon(exp.category)}</div>
         <div class="expense-row-body">
           <div class="expense-row-title">${exp.title}</div>
@@ -2439,58 +2556,54 @@ function renderExpenses() {
         </div>
         <div class="expense-row-right">
           <div class="expense-row-amount">${_fmtAmt(exp.amount, exp.currency)}</div>
-          <div class="expense-row-payer">${exp.splitType}</div>
+          ${myShare !== null ? `<div class="expense-row-payer">You: ${_fmtAmt(myShare, exp.currency)}</div>` : ''}
         </div>
       </div>`;
     });
   }
 
-  // ── History (settlements) ──
+  // ── Settlements ──
   const settlements = [...(appData.settlements || [])].sort((a, b) => b.date.localeCompare(a.date));
   let histHtml = '';
-  if (!settlements.length) {
-    histHtml = `<div style="padding:12px 0 4px;text-align:center;color:var(--text3);font-size:13px">No settlements recorded yet</div>`;
-  } else {
-    settlements.forEach((s, i) => {
-      const realIdx = appData.settlements.indexOf(s);
-      histHtml += `<div class="settle-row">
-        <div class="settle-row-icon">✅</div>
-        <div class="settle-row-body">
-          <div class="settle-row-desc">${_memberName(s.fromMember)} → ${_memberName(s.toMember)}${s.note ? ` · ${s.note}` : ''}</div>
-          <div class="settle-row-date">${formatDate(s.date)}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="settle-row-amount">${_fmtAmt(s.amount, s.currency)}</span>
-          <span onclick="deleteSettlement(${realIdx})" style="color:var(--danger);font-size:20px;padding:0 4px;cursor:pointer">×</span>
-        </div>
-      </div>`;
-    });
-  }
-
-  const totalExpenses = appData.expenses.length;
-  const memberCount   = appData.members.length;
+  settlements.forEach(s => {
+    const realIdx = appData.settlements.indexOf(s);
+    histHtml += `<div class="settle-row">
+      <div class="settle-row-icon">✅</div>
+      <div class="settle-row-body">
+        <div class="settle-row-desc">${_memberName(s.fromMember)} → ${_memberName(s.toMember)}${s.note ? ` · ${s.note}` : ''}</div>
+        <div class="settle-row-date">${formatDate(s.date)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="settle-row-amount">${_fmtAmt(s.amount, s.currency)}</span>
+        <span onclick="deleteSettlement(${realIdx})" style="color:var(--danger);font-size:20px;padding:0 4px;cursor:pointer">×</span>
+      </div>
+    </div>`;
+  });
 
   return `
+    ${summaryHtml}
     <div class="section-head">
-      <span class="section-title">⚖️ Balances</span>
-      ${memberCount < 2 ? '' : `<span class="total-chip">${base}</span>`}
+      <span class="section-title">Outstanding Debts</span>
+      ${myDebtCount > 0 ? `<label class="toggle-label"><input type="checkbox" id="split-my-only" onchange="toggleMyDebts(this.checked)"> Mine (${myDebtCount})</label>` : ''}
     </div>
-    ${memberCount < 2
-      ? `<div style="padding:12px 0 4px;text-align:center;color:var(--text3);font-size:13px">${memberCount === 0 ? 'No members yet — open this tab to join' : 'Need at least 2 members to split expenses'}</div>`
-      : balHtml}
-    <div class="section-head" style="margin-top:8px">
+    <div id="split-debts-container">${debtRowsHtml}</div>
+    <div class="section-head" style="margin-top:14px">
       <span class="section-title">💸 Expenses</span>
-      <div style="display:flex;gap:8px;align-items:center">
-        ${totalExpenses ? `<span class="total-chip">${totalExpenses} item${totalExpenses!==1?'s':''}</span>` : ''}
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="settle-btn" onclick="addSettlement()" style="border-color:#4ade8040;color:var(--success)">Settle Up</button>
         <button class="btn-add" onclick="addExpense()">＋ Add</button>
       </div>
     </div>
-    ${expHtml}
+    <div class="split-search-wrap">
+      <span class="split-search-icon">🔍</span>
+      <input class="split-search-input" type="search" placeholder="Search expenses..." oninput="filterSplitExpenses(this.value)">
+    </div>
+    <div id="split-expenses-container">${expHtml}</div>
+    ${histHtml ? `
     <div class="section-head" style="margin-top:8px">
       <span class="section-title">🤝 Settlements</span>
-      <button class="btn-add" onclick="addSettlement()">＋ Record</button>
     </div>
-    ${histHtml}
+    ${histHtml}` : ''}
   `;
 }
 
@@ -2510,6 +2623,37 @@ function submitMemberRegister() {
 // ── Expense CRUD ───────────────────────────────────────────────────────────────
 let _editExpenseIdx = -1;
 let _splitType = 'equal';
+let _splitSearch = '';
+let _splitMyDebtsOnly = false;
+
+function filterSplitExpenses(val) {
+  _splitSearch = val.toLowerCase().trim();
+  const container = document.getElementById('split-expenses-container');
+  if (!container) return;
+  container.querySelectorAll('.expense-row[data-title]').forEach(row => {
+    row.style.display = row.dataset.title.includes(_splitSearch) ? '' : 'none';
+  });
+  container.querySelectorAll('.expense-date-group').forEach(hdr => {
+    let next = hdr.nextElementSibling;
+    let hasVisible = false;
+    while (next && !next.classList.contains('expense-date-group')) {
+      if (next.classList.contains('expense-row') && next.style.display !== 'none') hasVisible = true;
+      next = next.nextElementSibling;
+    }
+    hdr.style.display = hasVisible ? '' : 'none';
+  });
+}
+
+function toggleMyDebts(checked) {
+  _splitMyDebtsOnly = checked;
+  const myId = _myMember()?.id || '';
+  const container = document.getElementById('split-debts-container');
+  if (!container) return;
+  container.querySelectorAll('.debt-row[data-from]').forEach(row => {
+    const visible = !_splitMyDebtsOnly || row.dataset.from === myId || row.dataset.to === myId;
+    row.style.display = visible ? '' : 'none';
+  });
+}
 
 function addExpense()      { _editExpenseIdx = -1; _splitType = 'equal'; openSheet('expense-form'); }
 function editExpense(i)    { _editExpenseIdx = i;  _splitType = (appData.expenses[i]?.splitType || 'equal'); openSheet('expense-form'); }
