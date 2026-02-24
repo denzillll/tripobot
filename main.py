@@ -122,7 +122,7 @@ ptb_app = Application.builder().token(BOT_TOKEN).build()
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # This is the "Coconut Split" style link
     # Change 'planner' to whatever Short Name you chose in BotFather
-    app_link = f"https://t.me/{context.bot.username}/planner"
+    app_link = f"https://t.me/{context.bot.username}/denzildog"
 
     kb = InlineKeyboardMarkup([[
         InlineKeyboardButton(text="🏔 Open Trip Planner", url=app_link)
@@ -132,7 +132,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Welcome! Click below to launch the app directly in this chat.",
         reply_markup=kb
     )
-    
+
 async def cmd_myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     data = load_data()
