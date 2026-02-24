@@ -63,6 +63,7 @@ def default_data() -> dict:
         "trip":           {"name": "New Trip", "dates": ""},
         "days":           [],
         "accoms":         [],
+        "flights":        [],
         "weather":        [],
         "refs":           [],
         "refCats":        [],

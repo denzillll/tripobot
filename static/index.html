@@ -296,6 +296,93 @@
   }
   .accom-link:active { opacity: 0.7; }
 
+  /* ── Bookings subtab bar ───────────────────────────────────────────────── */
+  .booking-subtab-bar {
+    display: flex;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 3px;
+    margin-bottom: 14px;
+    gap: 3px;
+  }
+  .booking-subtab {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .booking-subtab.active {
+    background: var(--card);
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  }
+
+  /* ── Flight card ────────────────────────────────────────────────────────── */
+  .flight-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .flight-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .flight-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .flight-route {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .flight-endpoint { flex: 1; }
+  .flight-endpoint:last-child { text-align: right; }
+  .flight-iata {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .flight-city {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .flight-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--gold2);
+    margin-top: 5px;
+  }
+  .flight-arrow {
+    font-size: 18px;
+    color: var(--text3);
+    flex-shrink: 0;
+  }
+
   /* ── Link rows ── */
   .link-row {
     display: flex;
@@ -1029,7 +1116,7 @@
       <span class="tab-icon">🗓</span>Plan
     </div>
     <div class="tab" data-tab="accoms" onclick="switchTab('accoms')">
-      <span class="tab-icon">🏨</span>Stay
+      <span class="tab-icon">🏨</span>Bookings
     </div>
     <div class="tab" data-tab="weather" onclick="switchTab('weather')">
       <span class="tab-icon">🌤</span>Weather
@@ -1136,6 +1223,7 @@ async function init() {
     if (!appData.expenses)       appData.expenses       = [];
     if (!appData.settlements)    appData.settlements    = [];
     if (!appData.tripCurrency)   appData.tripCurrency   = { base: 'SGD', rates: { MAD: 0.29, EUR: 1.45, USD: 1.35 } };
+    if (!appData.flights)        appData.flights        = [];
     // Migrate old links → refs
     if (!appData.refs) appData.refs = [];
     if (!appData.refCats) appData.refCats = [];
@@ -1209,7 +1297,7 @@ function renderTab(tab) {
   div.className = 'tab-content';
   switch(tab) {
     case 'itinerary': div.innerHTML = renderItinerary(); break;
-    case 'accoms':    div.innerHTML = renderAccoms(); break;
+    case 'accoms':    div.innerHTML = renderBookings(); break;
     case 'weather':   div.innerHTML = renderWeather(); break;
     case 'refs':      div.innerHTML = renderRefs(); break;
     case 'more':      div.innerHTML = renderMore(); break;
@@ -1314,6 +1402,64 @@ function deleteStop(di, si) {
 }
 
 // ── Accommodations ────────────────────────────────────────────────────────────
+// ── Bookings tab (Accoms + Flights) ───────────────────────────────────────────
+let _bookingSubtab = 'accoms';
+
+function switchBookingSubtab(sub) {
+  _bookingSubtab = sub;
+  renderTab('accoms');
+}
+
+function renderBookings() {
+  const bar = `
+    <div class="booking-subtab-bar">
+      <button class="booking-subtab ${_bookingSubtab==='accoms'?'active':''}" onclick="switchBookingSubtab('accoms')">🏨 Accoms</button>
+      <button class="booking-subtab ${_bookingSubtab==='flights'?'active':''}" onclick="switchBookingSubtab('flights')">✈️ Flights</button>
+    </div>`;
+  return bar + (_bookingSubtab === 'accoms' ? renderAccoms() : renderFlightsTab());
+}
+
+function renderFlightsTab() {
+  let html = `<div class="section-head"><span class="section-title">Flights</span>${isAdmin ? `<button class="btn-add" onclick="addFlight()">＋ Add</button>` : ''}</div>`;
+  if (!appData.flights || !appData.flights.length) {
+    html += `<div class="empty"><div class="empty-icon">✈️</div><div class="empty-text">No flights yet.<br>${isAdmin ? 'Tap <strong>+ Add</strong> to add a flight.' : 'Admin will add flights here.'}</div></div>`;
+    return html;
+  }
+  const flights = [...appData.flights].sort((a, b) => (a.depDate || '').localeCompare(b.depDate || ''));
+  flights.forEach(f => {
+    const i = appData.flights.indexOf(f);
+    const depLabel = [formatDate(f.depDate), f.depTime].filter(Boolean).join(' · ');
+    const arrLabel = [formatDate(f.arrDate || f.depDate), f.arrTime].filter(Boolean).join(' · ');
+    html += `
+    <div class="flight-card">
+      <div class="flight-header">
+        <div>
+          <div class="flight-number">✈️ ${f.flightNumber || '—'}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">${f.airline || ''}</div>
+        </div>
+        ${isAdmin ? `<div onclick="editFlight(${i})" style="color:var(--text3);font-size:15px;cursor:pointer;padding:2px 4px">✏️</div>` : ''}
+      </div>
+      <div class="flight-route">
+        <div class="flight-endpoint">
+          <div class="flight-iata">${f.fromCode || '—'}</div>
+          <div class="flight-city">${f.from || ''}</div>
+          <div class="flight-time">${depLabel}</div>
+        </div>
+        <div class="flight-arrow">→</div>
+        <div class="flight-endpoint">
+          <div class="flight-iata">${f.toCode || '—'}</div>
+          <div class="flight-city">${f.to || ''}</div>
+          <div class="flight-time">${arrLabel}</div>
+        </div>
+      </div>
+      ${f.ref ? `<div><span class="badge">📋 ${f.ref}</span></div>` : ''}
+      ${f.url ? `<a class="accom-link" href="${f.url}" target="_blank">🔗 Open booking ↗</a>` : ''}
+      ${f.notes ? `<div class="accom-notes">${f.notes}</div>` : ''}
+    </div>`;
+  });
+  return html;
+}
+
 let _editAccomIdx = -1;
 
 function addAccom()    { _editAccomIdx = -1; openSheet('add-accom'); }
@@ -1323,6 +1469,39 @@ function deleteAccom(i) {
   if (!confirm(`Remove "${appData.accoms[i].name}"?`)) return;
   appData.accoms.splice(i, 1);
   saveData().then(() => { _closeSheet(); renderTab('accoms'); });
+}
+
+let _editFlightIdx = -1;
+function addFlight()    { _editFlightIdx = -1; openSheet('add-flight'); }
+function editFlight(i)  { _editFlightIdx = i;  openSheet('add-flight'); }
+
+function deleteFlight(i) {
+  if (!confirm('Remove this flight?')) return;
+  appData.flights.splice(i, 1);
+  saveData().then(() => { _closeSheet(); _bookingSubtab = 'flights'; renderTab('accoms'); });
+}
+
+function submitFlight() {
+  const airline      = document.getElementById('f-airline')?.value.trim()   || '';
+  const flightNumber = document.getElementById('f-flight-num')?.value.trim()|| '';
+  const from         = document.getElementById('f-from')?.value.trim()      || '';
+  const fromCode     = document.getElementById('f-from-code')?.value.trim().toUpperCase() || '';
+  const to           = document.getElementById('f-to')?.value.trim()        || '';
+  const toCode       = document.getElementById('f-to-code')?.value.trim().toUpperCase()   || '';
+  if (!from || !to) { alert('From and To are required'); return; }
+  const depDate = document.getElementById('f-dep-date')?.value || '';
+  const depTime = document.getElementById('f-dep-time')?.value || '';
+  const arrDate = document.getElementById('f-arr-date')?.value || '';
+  const arrTime = document.getElementById('f-arr-time')?.value || '';
+  let url = document.getElementById('f-url')?.value.trim() || '';
+  if (url && !url.match(/^https?:\/\//i)) url = 'https://' + url;
+  const ref   = document.getElementById('f-ref')?.value.trim()   || '';
+  const notes = document.getElementById('f-notes')?.value.trim() || '';
+  const flight = { airline, flightNumber, from, fromCode, to, toCode, depDate, depTime, arrDate, arrTime, url, ref, notes };
+  if (!appData.flights) appData.flights = [];
+  if (_editFlightIdx >= 0) appData.flights[_editFlightIdx] = flight;
+  else appData.flights.push(flight);
+  saveData().then(() => { _closeSheet(); _bookingSubtab = 'flights'; renderTab('accoms'); });
 }
 
 function renderAccoms() {
@@ -1945,6 +2124,45 @@ function sheetContent(type) {
           <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Checkout 11am, Free parking, Contact...">${a?.notes || ''}</textarea></div>
           <button class="btn-primary" onclick="submitAccom()">${editing ? 'Save Changes' : 'Save Booking'}</button>
           ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteAccom(${_editAccomIdx})">× Remove Booking</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
+
+    case 'add-flight': {
+      const editing = _editFlightIdx >= 0;
+      const f = editing ? appData.flights[_editFlightIdx] : null;
+      return `
+        <div class="sheet-title">${editing ? 'Edit Flight' : 'Add Flight'}</div>
+        <div class="sheet-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field"><label>Airline</label><input id="f-airline" value="${f?.airline||''}" placeholder="Singapore Airlines" autocomplete="off"></div>
+            <div class="field"><label>Flight No.</label><input id="f-flight-num" value="${f?.flightNumber||''}" placeholder="SQ177" autocomplete="off"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:10px">
+            <div class="field"><label>From</label><input id="f-from" value="${f?.from||''}" placeholder="Singapore Changi" autocomplete="off"></div>
+            <div class="field" style="width:64px"><label>Code</label><input id="f-from-code" value="${f?.fromCode||''}" placeholder="SIN" autocomplete="off" style="text-transform:uppercase"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:10px">
+            <div class="field"><label>To</label><input id="f-to" value="${f?.to||''}" placeholder="Casablanca Mohammed V" autocomplete="off"></div>
+            <div class="field" style="width:64px"><label>Code</label><input id="f-to-code" value="${f?.toCode||''}" placeholder="CMN" autocomplete="off" style="text-transform:uppercase"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field">
+              <label>Departs</label>
+              <input id="f-dep-date" type="date" value="${f?.depDate||''}">
+              <input id="f-dep-time" type="time" value="${f?.depTime||''}" style="margin-top:6px">
+            </div>
+            <div class="field">
+              <label>Arrives</label>
+              <input id="f-arr-date" type="date" value="${f?.arrDate||''}">
+              <input id="f-arr-time" type="time" value="${f?.arrTime||''}" style="margin-top:6px">
+            </div>
+          </div>
+          <div class="field"><label>Booking URL (optional)</label><input id="f-url" type="url" value="${f?.url||''}" placeholder="https://..."></div>
+          <div class="field"><label>Ref / PNR (optional)</label><input id="f-ref" value="${f?.ref||''}" placeholder="A1B2C3" autocomplete="off"></div>
+          <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Baggage 23kg, online check-in opens...">${f?.notes||''}</textarea></div>
+          <button class="btn-primary" onclick="submitFlight()">${editing ? 'Save Changes' : 'Add Flight'}</button>
+          ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteFlight(${_editFlightIdx})">× Remove Flight</button>` : ''}
           <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
         </div>`;
     }
