@@ -308,6 +308,20 @@
   }
   .link-row-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
   .link-arrow { color: var(--text3); font-size: 16px; }
+  .type-btn {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text2);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .type-btn.selected { background: var(--gold-dim); border-color: var(--gold); color: var(--gold2); font-weight: 600; }
+  input[type=file] { appearance: auto; -webkit-appearance: auto; padding: 10px 14px; cursor: pointer; }
 
   /* ── Section headings ── */
   .section-head {
@@ -686,8 +700,8 @@
     <div class="tab" data-tab="weather" onclick="switchTab('weather')">
       <span class="tab-icon">🌤</span>Weather
     </div>
-    <div class="tab" data-tab="links" onclick="switchTab('links')">
-      <span class="tab-icon">🔗</span>Links
+    <div class="tab" data-tab="refs" onclick="switchTab('refs')">
+      <span class="tab-icon">📎</span>Refs
     </div>
     <div class="tab" data-tab="more" onclick="switchTab('more')">
       <span class="tab-icon">⋯</span>More
@@ -748,6 +762,19 @@ async function init() {
     }
     if (!appData.groupChecklist) appData.groupChecklist = [];
     if (!appData.groupProgress)  appData.groupProgress  = {};
+    // Migrate old links → refs with custom categories
+    if (appData.links && !appData.refs) {
+      appData.refCats = [
+        {id:'trail',   label:'Trail Status', icon:'🥾'},
+        {id:'booking', label:'Bookings',     icon:'🎫'},
+        {id:'other',   label:'Other',        icon:'📌'}
+      ];
+      appData.refs = (appData.links || []).map(l => ({...l, type:'link'}));
+      delete appData.links;
+      saveData();
+    }
+    if (!appData.refs)    appData.refs    = [];
+    if (!appData.refCats) appData.refCats = [];
     isAdmin = adminRes.is_admin;
     document.getElementById('trip-name').textContent = appData.trip.name;
     document.getElementById('trip-dates').textContent = appData.trip.dates;
@@ -782,7 +809,7 @@ function renderTab(tab) {
     case 'itinerary': div.innerHTML = renderItinerary(); break;
     case 'accoms':    div.innerHTML = renderAccoms(); break;
     case 'weather':   div.innerHTML = renderWeather(); break;
-    case 'links':     div.innerHTML = renderLinks(); break;
+    case 'refs':      div.innerHTML = renderRefs(); break;
     case 'more':      div.innerHTML = renderMore(); break;
   }
   el.appendChild(div);
@@ -1093,31 +1120,128 @@ async function submitWxLoc() {
   saveData().then(() => { _closeSheet(); renderTab('weather'); });
 }
 
-// ── Links ─────────────────────────────────────────────────────────────────────
-function renderLinks() {
-  const cats = {trail: {label: 'Trail Status', icon: '🥾'}, booking: {label: 'Bookings', icon: '🎫'}, other: {label: 'Other', icon: '📌'}};
-  let html = `<div class="section-head"><span class="section-title">Key Links</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-link')">＋ Add</button>` : ''}</div>`;
-  
-  Object.entries(cats).forEach(([cat, {label, icon}]) => {
-    const items = appData.links.filter(l => l.cat === cat);
-    if (!items.length) return;
-    html += `<div class="checklist-group-title" style="margin:16px 0 8px">${icon} ${label}</div>`;
-    items.forEach((l, i) => {
-      const idx = appData.links.indexOf(l);
-      html += `
-      <a class="link-row" href="${l.url}" target="_blank">
-        <div class="link-row-content"><div class="link-row-name">${l.name}</div></div>
-        ${isAdmin ? `<div onclick="event.preventDefault();deleteLink(${idx})" style="color:var(--danger);font-size:18px;padding:0 4px">×</div>` : `<span class="link-arrow">↗</span>`}
-      </a>`;
-    });
+// ── Refs ──────────────────────────────────────────────────────────────────────
+function renderRefs() {
+  const cats = appData.refCats || [];
+  const refs  = appData.refs   || [];
+  let html = `<div class="section-head">
+    <span class="section-title">References</span>
+    ${isAdmin ? `<div style="display:flex;gap:6px">
+      <button class="btn-add" onclick="addRefCat()">＋ Cat</button>
+      <button class="btn-add" onclick="addRef()">＋ Add</button>
+    </div>` : ''}
+  </div>`;
+
+  // group by cat id
+  const grouped = {};
+  refs.forEach((r, i) => { const k = r.cat || ''; (grouped[k] = grouped[k] || []).push({r, i}); });
+
+  cats.forEach((cat, ci) => {
+    const items = grouped[cat.id] || [];
+    html += `<div class="checklist-group-title" style="margin:16px 0 8px">
+      <span>${cat.icon} ${cat.label}</span>
+      ${isAdmin ? `<span onclick="editRefCat(${ci})" style="color:var(--text3);cursor:pointer;font-size:13px">✏️</span>` : ''}
+    </div>`;
+    if (!items.length) {
+      html += `<div style="padding:8px 0;color:var(--text3);font-size:13px">${isAdmin ? 'No items — tap ＋ Add' : 'No items'}</div>`;
+    }
+    items.forEach(({r, i}) => { html += _refRow(r, i); });
   });
+
+  // uncategorized / unknown cat
+  const knownIds = new Set(cats.map(c => c.id));
+  const uncat = refs.map((r, i) => ({r, i})).filter(({r}) => !knownIds.has(r.cat || ''));
+  if (uncat.length) {
+    html += `<div class="checklist-group-title" style="margin:16px 0 8px"><span>📌 Other</span></div>`;
+    uncat.forEach(({r, i}) => { html += _refRow(r, i); });
+  }
+
+  if (!refs.length && !cats.length) {
+    html += `<div class="empty"><div class="empty-icon">📎</div><div class="empty-text">No references yet.${isAdmin ? '<br>Tap <strong>＋ Add</strong> to get started.' : ''}</div></div>`;
+  }
   return html;
 }
 
-function deleteLink(i) {
-  if (!confirm(`Remove "${appData.links[i].name}"?`)) return;
-  appData.links.splice(i, 1);
-  saveData().then(() => renderTab('links'));
+function _refRow(r, i) {
+  const isFile = r.type === 'file';
+  return `
+    <a class="link-row" href="${r.url}" target="_blank">
+      <span class="link-row-icon">${isFile ? '📄' : '🔗'}</span>
+      <div class="link-row-content">
+        <div class="link-row-name">${r.name}</div>
+        ${r.notes ? `<div class="link-row-sub">${r.notes}</div>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        ${isAdmin ? `<span onclick="event.preventDefault();editRef(${i})" style="color:var(--text3);font-size:14px">✏️</span>` : ''}
+        <span class="link-arrow">${isFile ? '↓' : '↗'}</span>
+      </div>
+    </a>`;
+}
+
+let _editRefIdx    = -1;
+let _editRefCatIdx = -1;
+
+function addRef()   { _editRefIdx = -1; openSheet('ref-form'); }
+function editRef(i) { _editRefIdx = i;  openSheet('ref-form'); }
+function deleteRef(i) {
+  if (!confirm(`Remove "${appData.refs[i]?.name}"?`)) return;
+  appData.refs.splice(i, 1);
+  saveData().then(() => { _closeSheet(); renderTab('refs'); });
+}
+async function submitRef() {
+  const name  = document.getElementById('f-ref-name')?.value.trim();
+  const notes = document.getElementById('f-ref-notes')?.value.trim() || '';
+  const cat   = document.getElementById('f-ref-cat')?.value || '';
+  const type  = document.getElementById('f-ref-type')?.value || 'link';
+  if (!name) { alert('Name required'); return; }
+  let url = '';
+  if (type === 'link') {
+    url = document.getElementById('f-ref-url')?.value.trim() || '';
+    if (!url) { alert('URL required'); return; }
+    if (!url.match(/^https?:\/\//i)) url = 'https://' + url;
+  } else {
+    const fileInput = document.getElementById('f-ref-file');
+    if (fileInput?.files?.length) {
+      const btn = document.querySelector('[onclick="submitRef()"]');
+      if (btn) { btn.textContent = 'Uploading…'; btn.disabled = true; }
+      const fd = new FormData();
+      fd.append('file', fileInput.files[0]);
+      const res  = await fetch(`/api/upload?chat_id=${encodeURIComponent(chatId)}`, { method: 'POST', body: fd });
+      const data = await res.json();
+      url = data.url;
+    } else if (_editRefIdx >= 0) {
+      url = appData.refs[_editRefIdx]?.url || '';  // keep existing
+    }
+    if (!url) { alert('Please select a file'); return; }
+  }
+  const ref = { name, url, cat, type, notes };
+  if (_editRefIdx >= 0) appData.refs[_editRefIdx] = ref;
+  else appData.refs.push(ref);
+  saveData().then(() => { _closeSheet(); renderTab('refs'); });
+}
+function setRefType(type) {
+  document.getElementById('f-ref-type').value = type;
+  document.getElementById('f-ref-url-wrap').style.display  = type === 'link' ? '' : 'none';
+  document.getElementById('f-ref-file-wrap').style.display = type === 'file' ? '' : 'none';
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('selected', b.dataset.type === type));
+}
+function addRefCat()    { _editRefCatIdx = -1; openSheet('ref-cat-form'); }
+function editRefCat(ci) { _editRefCatIdx = ci; openSheet('ref-cat-form'); }
+function deleteRefCat(ci) {
+  if (!confirm(`Delete "${appData.refCats[ci]?.label}"? Items move to Other.`)) return;
+  appData.refCats.splice(ci, 1);
+  saveData().then(() => { _closeSheet(); renderTab('refs'); });
+}
+function submitRefCat() {
+  const icon  = document.getElementById('f-cat-icon')?.value.trim() || '📁';
+  const label = document.getElementById('f-cat-label')?.value.trim();
+  if (!label) { alert('Category name required'); return; }
+  if (_editRefCatIdx >= 0) {
+    appData.refCats[_editRefCatIdx] = { ...appData.refCats[_editRefCatIdx], icon, label };
+  } else {
+    appData.refCats.push({ id: 'rc' + Date.now(), label, icon });
+  }
+  saveData().then(() => { _closeSheet(); renderTab('refs'); });
 }
 
 // ── More ──────────────────────────────────────────────────────────────────────
@@ -1401,21 +1525,60 @@ function sheetContent(type) {
         <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
       </div>`;
 
-    case 'add-link': return `
-      <div class="sheet-title">Add Key Link</div>
-      <div class="sheet-body">
-        <div class="field"><label>Name</label><input id="f-name" placeholder="Park webcam, Avalanche bulletin..." autocomplete="off"></div>
-        <div class="field"><label>URL</label><input id="f-url" type="url" placeholder="https://..."></div>
-        <div class="field"><label>Category</label>
-          <select id="f-cat">
-            <option value="trail">🥾 Trail Status</option>
-            <option value="booking">🎫 Booking</option>
-            <option value="other">📌 Other</option>
-          </select>
-        </div>
-        <button class="btn-primary" onclick="submitLink()">Save Link</button>
-        <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
-      </div>`;
+    case 'ref-form': {
+      const editing = _editRefIdx >= 0;
+      const r = editing ? appData.refs[_editRefIdx] : null;
+      const isFile = r?.type === 'file';
+      const catOpts = (appData.refCats || []).map(c =>
+        `<option value="${c.id}" ${r?.cat === c.id ? 'selected' : ''}>${c.icon} ${c.label}</option>`
+      ).join('');
+      return `
+        <div class="sheet-title">${editing ? 'Edit Reference' : 'Add Reference'}</div>
+        <div class="sheet-body">
+          <div class="field"><label>Name</label><input id="f-ref-name" value="${r?.name || ''}" placeholder="Booking confirmation, Trail map…" autocomplete="off"></div>
+          <div class="field">
+            <label>Type</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px">
+              <div class="type-btn ${!isFile ? 'selected' : ''}" data-type="link" onclick="setRefType('link')">🔗 Link</div>
+              <div class="type-btn ${isFile  ? 'selected' : ''}" data-type="file" onclick="setRefType('file')">📄 File</div>
+            </div>
+            <input type="hidden" id="f-ref-type" value="${r?.type || 'link'}">
+          </div>
+          <div class="field" id="f-ref-url-wrap" ${isFile ? 'style="display:none"' : ''}>
+            <label>URL</label><input id="f-ref-url" type="url" value="${!isFile ? (r?.url || '') : ''}" placeholder="https://…">
+          </div>
+          <div class="field" id="f-ref-file-wrap" ${!isFile ? 'style="display:none"' : ''}>
+            <label>File</label>
+            ${editing && isFile ? `<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Current: <a href="${r.url}" target="_blank" style="color:var(--gold2)">${r.name}</a> — select below to replace</div>` : ''}
+            <input id="f-ref-file" type="file">
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <select id="f-ref-cat">
+              ${catOpts}
+              <option value="" ${!r?.cat || !appData.refCats?.find(c=>c.id===r.cat) ? 'selected' : ''}>📌 Uncategorized</option>
+            </select>
+          </div>
+          <div class="field"><label>Notes (optional)</label><textarea id="f-ref-notes" placeholder="Context, deadline, password…">${r?.notes || ''}</textarea></div>
+          <button class="btn-primary" onclick="submitRef()">${editing ? 'Save Changes' : 'Add Reference'}</button>
+          ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteRef(${_editRefIdx})">× Remove</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`; }
+
+    case 'ref-cat-form': {
+      const editing = _editRefCatIdx >= 0;
+      const cat = editing ? appData.refCats[_editRefCatIdx] : null;
+      return `
+        <div class="sheet-title">${editing ? 'Edit Category' : 'Add Category'}</div>
+        <div class="sheet-body">
+          <div style="display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:start">
+            <div class="field"><label>Icon</label><input id="f-cat-icon" value="${cat?.icon || ''}" placeholder="📁" maxlength="4" style="font-size:24px;text-align:center;padding:8px 4px"></div>
+            <div class="field"><label>Name</label><input id="f-cat-label" value="${cat?.label || ''}" placeholder="Bookings, Trails…" autocomplete="off"></div>
+          </div>
+          <button class="btn-primary" onclick="submitRefCat()">${editing ? 'Save Changes' : 'Add Category'}</button>
+          ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteRefCat(${_editRefCatIdx})">× Delete Category</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`; }
 
     case 'stop-form': {
       const editing = _editStopIdx >= 0;
@@ -1639,13 +1802,6 @@ function submitWeather() {
   saveData().then(() => { _closeSheet(); renderTab('weather'); });
 }
 
-function submitLink() {
-  const name = document.getElementById('f-name')?.value.trim();
-  const url  = document.getElementById('f-url')?.value.trim();
-  if (!name || !url) { alert('Name and URL are required'); return; }
-  appData.links.push({ name, url, cat: document.getElementById('f-cat')?.value || 'other' });
-  saveData().then(() => { _closeSheet(); renderTab('links'); });
-}
 
 function prefillFromAccom() {
   const sel = document.getElementById('f-accomsel');
