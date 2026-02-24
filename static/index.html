@@ -859,8 +859,19 @@ function deleteStop(di, si) {
 }
 
 // ── Accommodations ────────────────────────────────────────────────────────────
+let _editAccomIdx = -1;
+
+function addAccom()    { _editAccomIdx = -1; openSheet('add-accom'); }
+function editAccom(i)  { _editAccomIdx = i;  openSheet('add-accom'); }
+
+function deleteAccom(i) {
+  if (!confirm(`Remove "${appData.accoms[i].name}"?`)) return;
+  appData.accoms.splice(i, 1);
+  saveData().then(() => { _closeSheet(); renderTab('accoms'); });
+}
+
 function renderAccoms() {
-  let html = `<div class="section-head"><span class="section-title">Accommodation</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-accom')">＋ Add</button>` : ''}</div>`;
+  let html = `<div class="section-head"><span class="section-title">Accommodation</span>${isAdmin ? `<button class="btn-add" onclick="addAccom()">＋ Add</button>` : ''}</div>`;
   if (!appData.accoms.length) {
     html += `<div class="empty"><div class="empty-icon">🏨</div><div class="empty-text">No bookings yet.<br>${isAdmin ? 'Tap <strong>+ Add</strong> to add your first booking.' : 'Admin will add bookings here.'}</div></div>`;
     return html;
@@ -868,23 +879,19 @@ function renderAccoms() {
   appData.accoms.forEach((a, i) => {
     html += `
     <div class="accom-card">
-      <div class="accom-name">${a.name}</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div class="accom-name">${a.name}</div>
+        ${isAdmin ? `<div onclick="editAccom(${i})" style="color:var(--text3);font-size:15px;cursor:pointer;padding:2px 4px;flex-shrink:0">✏️</div>` : ''}
+      </div>
       <div class="accom-meta">
         ${a.day ? `<span class="badge">📅 ${a.day}</span>` : ''}
         ${a.notes ? `<span class="badge">📝 ${a.notes}</span>` : ''}
       </div>
       <a class="accom-link" href="${a.url}" target="_blank">🔗 Open booking ↗</a>
       ${a.mapsUrl ? `<a class="accom-link" href="${a.mapsUrl}" target="_blank">📍 Open in Maps ↗</a>` : ''}
-      ${isAdmin ? `<div onclick="deleteAccom(${i})" style="color:var(--danger);font-size:12px;font-weight:600;cursor:pointer;margin-top:4px;padding:2px 0">× Remove</div>` : ''}
     </div>`;
   });
   return html;
-}
-
-function deleteAccom(i) {
-  if (!confirm(`Remove "${appData.accoms[i].name}"?`)) return;
-  appData.accoms.splice(i, 1);
-  saveData().then(() => renderTab('accoms'));
 }
 
 // ── Weather ───────────────────────────────────────────────────────────────────
@@ -1187,21 +1194,33 @@ function _closeSheet() {
 
 function sheetContent(type) {
   switch(type) {
-    case 'add-accom': return `
-      <div class="sheet-title">Add Accommodation</div>
-      <div class="sheet-sub">Add a booking for the trip</div>
-      <div class="sheet-body">
-        <div class="field"><label>Name</label><input id="f-name" placeholder="Airbnb Arenas, Hotel Rural..." autocomplete="off"></div>
-        <div class="field"><label>Booking URL</label><input id="f-url" type="url" placeholder="https://airbnb.com/rooms/..."></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="field"><label>Check-in</label><input id="f-checkin" type="date"></div>
-          <div class="field"><label>Check-out</label><input id="f-checkout" type="date"></div>
-        </div>
-        <div class="field"><label>Google Maps URL (optional)</label><input id="f-maps" type="url" placeholder="https://maps.app.goo.gl/..."></div>
-        <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Checkout 11am, Free parking, Contact..."></textarea></div>
-        <button class="btn-primary" onclick="submitAccom()">Save Booking</button>
-        <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
-      </div>`;
+    case 'add-accom': {
+      const editing = _editAccomIdx >= 0;
+      const a = editing ? appData.accoms[_editAccomIdx] : null;
+      return `
+        <div class="sheet-title">${editing ? 'Edit Accommodation' : 'Add Accommodation'}</div>
+        <div class="sheet-body">
+          <div class="field"><label>Name</label><input id="f-name" value="${a?.name || ''}" placeholder="Airbnb Arenas, Hotel Rural..." autocomplete="off"></div>
+          <div class="field"><label>Booking URL</label><input id="f-url" type="url" value="${a?.url || ''}" placeholder="https://airbnb.com/rooms/..."></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field">
+              <label>Check-in</label>
+              <input id="f-checkin" type="date" value="${a?.checkin || ''}" style="color-scheme:dark">
+              <input id="f-checkin-time" type="time" value="${a?.checkinTime || ''}" style="color-scheme:dark;margin-top:6px">
+            </div>
+            <div class="field">
+              <label>Check-out</label>
+              <input id="f-checkout" type="date" value="${a?.checkout || ''}" style="color-scheme:dark">
+              <input id="f-checkout-time" type="time" value="${a?.checkoutTime || ''}" style="color-scheme:dark;margin-top:6px">
+            </div>
+          </div>
+          <div class="field"><label>Google Maps URL (optional)</label><input id="f-maps" type="url" value="${a?.mapsUrl || ''}" placeholder="https://maps.app.goo.gl/..."></div>
+          <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Checkout 11am, Free parking, Contact...">${a?.notes || ''}</textarea></div>
+          <button class="btn-primary" onclick="submitAccom()">${editing ? 'Save Changes' : 'Save Booking'}</button>
+          ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteAccom(${_editAccomIdx})">× Remove Booking</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
 
     case 'add-weather': return `
       <div class="sheet-title">Add Forecast Link</div>
@@ -1369,17 +1388,24 @@ function submitAccom() {
   let url    = document.getElementById('f-url')?.value.trim();
   if (!name || !url) { alert('Name and URL are required'); return; }
   if (!url.match(/^https?:\/\//i)) url = 'https://' + url;
-  const checkin  = document.getElementById('f-checkin')?.value;
-  const checkout = document.getElementById('f-checkout')?.value;
+  const checkin      = document.getElementById('f-checkin')?.value      || '';
+  const checkout     = document.getElementById('f-checkout')?.value     || '';
+  const checkinTime  = document.getElementById('f-checkin-time')?.value  || '';
+  const checkoutTime = document.getElementById('f-checkout-time')?.value || '';
   let day = '';
-  if (checkin && checkout) day = formatDate(checkin) + ' – ' + formatDate(checkout);
-  else if (checkin) day = formatDate(checkin);
+  if (checkin) {
+    day = formatDate(checkin);
+    if (checkinTime) day += ' ' + checkinTime;
+  }
+  if (checkout) {
+    day += (day ? ' – ' : '') + formatDate(checkout);
+    if (checkoutTime) day += ' ' + checkoutTime;
+  }
   let mapsUrl = document.getElementById('f-maps')?.value.trim() || '';
   if (mapsUrl && !mapsUrl.match(/^https?:\/\//i)) mapsUrl = 'https://' + mapsUrl;
-  appData.accoms.push({
-    name, url, day, mapsUrl,
-    notes: document.getElementById('f-notes')?.value.trim() || ''
-  });
+  const accom = { name, url, day, mapsUrl, notes: document.getElementById('f-notes')?.value.trim() || '', checkin, checkout, checkinTime, checkoutTime };
+  if (_editAccomIdx >= 0) { appData.accoms[_editAccomIdx] = accom; }
+  else { appData.accoms.push(accom); }
   saveData().then(() => { _closeSheet(); renderTab('accoms'); });
 }
 
@@ -1408,6 +1434,8 @@ function prefillFromAccom() {
   if (nameEl && !nameEl.value) nameEl.value = accom.name;
   const mapsEl = document.getElementById('f-stopmaps');
   if (mapsEl && !mapsEl.value && accom.mapsUrl) mapsEl.value = accom.mapsUrl;
+  const notesEl = document.getElementById('f-notes');
+  if (notesEl && !notesEl.value && accom.notes) notesEl.value = accom.notes;
 }
 
 function submitStop() {
