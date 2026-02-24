@@ -20,7 +20,7 @@ BOT_TOKEN  = os.environ.get("BOT_TOKEN", "")
 
 RAW_URL = os.environ.get("WEB_APP_URL", "").rstrip("/")
 
-# If the URL is set but missing 'https://', add it manually
+# If the URL exists but doesn't start with https://, fix it
 if RAW_URL and not RAW_URL.startswith("http"):
     WEB_APP_URL = f"https://{RAW_URL}"
 else:
@@ -118,15 +118,22 @@ def default_data() -> dict:
 
 ptb_app = Application.builder().token(BOT_TOKEN).build()
 
+# --- Around line 125: Fix the Start Command ---
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not WEB_APP_URL:
-        await update.message.reply_text("WEB_APP_URL not configured.")
+        await update.message.reply_text("❌ Configuration Error: WEB_APP_URL is missing.")
         return
+
+    # Now WEB_APP_URL is guaranteed to have https://
     kb = InlineKeyboardMarkup([[
-        InlineKeyboardButton("🏔 Open Trip Planner", web_app=WebAppInfo(url=WEB_APP_URL))
+        InlineKeyboardButton(
+            "🏔 Open Trip Planner", 
+            web_app=WebAppInfo(url=WEB_APP_URL)
+        )
     ]])
+    
     await update.message.reply_text(
-        "Tap below to open the trip planner.",
+        "Welcome to your Trip Planner! Tap the button below to start.",
         reply_markup=kb
     )
 
