@@ -81,16 +81,22 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not WEB_APP_URL:
         await update.message.reply_text("WEB_APP_URL not configured.")
         return
-    chat_id = update.effective_chat.id if update.effective_chat else None
+    chat_id  = update.effective_chat.id   if update.effective_chat else None
+    chat_type = update.effective_chat.type if update.effective_chat else "private"
     url = f"{WEB_APP_URL}?cid={chat_id}" if chat_id else WEB_APP_URL
-    logging.info(f"cmd_start: url={repr(url)}")
-    kb = InlineKeyboardMarkup([[
-        InlineKeyboardButton("🏔 Open Trip Planner", web_app=WebAppInfo(url=url))
-    ]])
-    await update.message.reply_text(
-        "Tap below to open the trip planner.",
-        reply_markup=kb
-    )
+    logging.info(f"cmd_start: url={repr(url)}, chat_type={chat_type}")
+
+    if chat_type == "private":
+        # web_app button only works in private chats
+        button = InlineKeyboardButton("🏔 Open Trip Planner", web_app=WebAppInfo(url=url))
+        text   = "Tap below to open the trip planner."
+    else:
+        # In groups, use the 🏔 Trip menu button at the top of the chat.
+        # Inline web_app buttons are not allowed in groups.
+        button = InlineKeyboardButton("🏔 Open Trip Planner", url=url)
+        text   = "Use the 🏔 Trip button at the top of the chat to open the planner with full access."
+    kb = InlineKeyboardMarkup([[button]])
+    await update.message.reply_text(text, reply_markup=kb)
 
 async def cmd_myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid     = update.effective_user.id
