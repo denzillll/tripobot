@@ -17,6 +17,7 @@ logging.basicConfig(level=logging.INFO)
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "")
 _raw_url = os.environ.get("WEB_APP_URL", "").rstrip("/")
 WEB_APP_URL = _raw_url if _raw_url.startswith("https://") else f"https://{_raw_url}" if _raw_url else ""
+MINI_APP_LINK = os.environ.get("MINI_APP_LINK", "")  # e.g. https://t.me/YourBot/AppName
 DATA_FILE  = Path("data.json")
 
 
@@ -111,11 +112,13 @@ def default_data() -> dict:
 ptb_app = Application.builder().token(BOT_TOKEN).build()
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not WEB_APP_URL:
+    link = MINI_APP_LINK or WEB_APP_URL
+    logging.info(f"cmd_start: using link={repr(link)}")
+    if not link:
         await update.message.reply_text("WEB_APP_URL not configured.")
         return
     kb = InlineKeyboardMarkup([[
-        InlineKeyboardButton("🏔 Open Trip Planner", web_app=WebAppInfo(url=WEB_APP_URL))
+        InlineKeyboardButton("🏔 Open Trip Planner", url=link)
     ]])
     await update.message.reply_text(
         "Tap below to open the trip planner.",
@@ -145,10 +148,14 @@ async def cmd_addadmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("Invalid ID.")
 
+async def error_handler(_update: object, context: ContextTypes.DEFAULT_TYPE):
+    logging.error(f"Telegram error: {context.error}", exc_info=context.error)
+
 ptb_app.add_handler(CommandHandler("start", cmd_start))
 ptb_app.add_handler(CommandHandler("trip", cmd_start))
 ptb_app.add_handler(CommandHandler("myid", cmd_myid))
 ptb_app.add_handler(CommandHandler("addadmin", cmd_addadmin))
+ptb_app.add_error_handler(error_handler)
 
 
 # ── FastAPI App ───────────────────────────────────────────────────────────────
