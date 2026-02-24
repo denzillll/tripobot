@@ -769,12 +769,18 @@ if (tg) { tg.expand(); tg.ready(); }
 
 const userId = tg?.initDataUnsafe?.user?.id || null;
 
-// Priority: ?cid= URL param (injected by /start command) → initDataUnsafe.chat.id
-// (menu button) → initDataUnsafe.user.id (DM) → 'default' (local dev)
-const _urlCid = new URLSearchParams(window.location.search).get('cid');
+// Priority:
+//   1. start_param  — deep link t.me/Bot/app?startapp=CHAT_ID  (most reliable, /start command)
+//   2. chat.id      — menu button opened from a group
+//   3. ?cid= param  — fallback for plain URL buttons
+//   4. user.id      — DM fallback
+//   5. 'default'    — local dev
+const _startParam = tg?.initDataUnsafe?.start_param || null;
+const _urlCid     = new URLSearchParams(window.location.search).get('cid');
 const chatId = String(
-  _urlCid ||
+  _startParam ||
   tg?.initDataUnsafe?.chat?.id ||
+  _urlCid ||
   tg?.initDataUnsafe?.user?.id ||
   'default'
 );
