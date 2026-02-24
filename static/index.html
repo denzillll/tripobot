@@ -602,6 +602,38 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Live weather cards ── */
+  .wx-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .wx-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .wx-loc-name { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; }
+  .wx-loc-tag  { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--gold2); }
+  .wx-day-row  {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .wx-day-row:last-child { border-bottom: none; }
+  .wx-day-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); min-width: 44px; flex-shrink: 0; }
+  .wx-icon  { font-size: 20px; flex-shrink: 0; }
+  .wx-mid   { flex: 1; min-width: 0; }
+  .wx-cond  { font-size: 13px; font-weight: 500; }
+  .wx-meta  { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .wx-temps { text-align: right; flex-shrink: 0; }
+  .wx-hi    { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--text); }
+  .wx-lo    { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
+
   /* ── Animations ── */
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
@@ -786,9 +818,72 @@ function deleteAccom(i) {
 }
 
 // ── Weather ───────────────────────────────────────────────────────────────────
+function wmoInfo(code) {
+  if (code === 0)   return { e: '☀️', label: 'Clear sky' };
+  if (code <= 1)    return { e: '🌤', label: 'Mainly clear' };
+  if (code <= 2)    return { e: '⛅', label: 'Partly cloudy' };
+  if (code <= 3)    return { e: '☁️', label: 'Overcast' };
+  if (code <= 48)   return { e: '🌫', label: 'Fog' };
+  if (code <= 55)   return { e: '🌦', label: 'Drizzle' };
+  if (code <= 67)   return { e: '🌧', label: 'Rain' };
+  if (code <= 77)   return { e: '❄️', label: 'Snow' };
+  if (code <= 82)   return { e: '🌦', label: 'Showers' };
+  if (code <= 86)   return { e: '🌨', label: 'Snow showers' };
+  return                  { e: '⛈', label: 'Thunderstorm' };
+}
+
+async function loadLiveWeather() {
+  const el = document.getElementById('live-weather');
+  if (!el) return;
+  const locations = [
+    { name: 'Burgos',          tag: 'Thu 26 Feb', lat: 42.3439, lon: -3.6969, dates: ['2026-02-26'] },
+    { name: 'Picos de Europa', tag: 'Fri–Sat',    lat: 43.2520, lon: -4.8492, dates: ['2026-02-27','2026-02-28'], wind: true },
+    { name: 'Valdesqui',       tag: 'Sun 1 Mar',  lat: 40.8897, lon: -3.9153, dates: ['2026-03-01'], snow: true },
+  ];
+  try {
+    const results = await Promise.all(locations.map(loc =>
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,weather_code,wind_speed_10m_max,snowfall_sum&timezone=Europe%2FMadrid&wind_speed_unit=kmh&forecast_days=10`)
+        .then(r => r.json())
+    ));
+    let html = '';
+    locations.forEach((loc, li) => {
+      const d = results[li].daily;
+      html += `<div class="wx-card"><div class="wx-header"><span class="wx-loc-name">${loc.name}</span><span class="wx-loc-tag">${loc.tag}</span></div>`;
+      loc.dates.forEach(dateStr => {
+        const idx = d.time.indexOf(dateStr);
+        if (idx === -1) return;
+        const { e, label } = wmoInfo(d.weather_code[idx]);
+        const hi    = Math.round(d.temperature_2m_max[idx]);
+        const lo    = Math.round(d.temperature_2m_min[idx]);
+        const precP = d.precipitation_probability_max[idx];
+        const precM = d.precipitation_sum[idx];
+        const wind  = Math.round(d.wind_speed_10m_max[idx]);
+        const snow  = d.snowfall_sum[idx];
+        const day   = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
+        let meta = `💧 ${precP}%`;
+        if (precM > 0) meta += ` · ${precM.toFixed(1)}mm`;
+        if (loc.wind || wind > 25) meta += ` · 💨 ${wind} km/h`;
+        if (loc.snow) meta += snow > 0 ? ` · ❄️ ${snow}cm new` : ` · ❄️ no new snow`;
+        html += `<div class="wx-day-row">
+          <span class="wx-day-label">${day}</span>
+          <span class="wx-icon">${e}</span>
+          <div class="wx-mid"><div class="wx-cond">${label}</div><div class="wx-meta">${meta}</div></div>
+          <div class="wx-temps"><div class="wx-hi">${hi}°</div><div class="wx-lo">${lo}°</div></div>
+        </div>`;
+      });
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  } catch(err) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px">Could not load live weather</div>';
+  }
+}
+
 function renderWeather() {
   let html = `
-    <div class="section-head"><span class="section-title">Forecasts</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-weather')">＋ Add</button>` : ''}</div>
+    <div class="section-head"><span class="section-title">Live Weather</span></div>
+    <div id="live-weather"><div class="spinner" style="margin:20px auto"></div></div>
+    <div class="section-head" style="margin-top:20px"><span class="section-title">Forecasts</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-weather')">＋ Add</button>` : ''}</div>
     <div class="weather-note">⚠️ Check forecasts the morning of each hike</div>`;
   appData.weather.forEach((w, i) => {
     html += `
@@ -801,6 +896,7 @@ function renderWeather() {
       ${isAdmin ? `<div onclick="event.preventDefault();deleteWeather(${i})" style="color:var(--danger);font-size:18px;padding:0 4px">×</div>` : `<span class="link-arrow">↗</span>`}
     </a>`;
   });
+  setTimeout(loadLiveWeather, 0);
   return html;
 }
 
