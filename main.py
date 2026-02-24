@@ -15,7 +15,8 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "")
-WEB_APP_URL = os.environ.get("WEB_APP_URL", "").rstrip("/")   # e.g. https://tripbot.railway.app
+_raw_url = os.environ.get("WEB_APP_URL", "").rstrip("/")
+WEB_APP_URL = _raw_url if _raw_url.startswith("https://") else f"https://{_raw_url}" if _raw_url else ""
 DATA_FILE  = Path("data.json")
 
 
