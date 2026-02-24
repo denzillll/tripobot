@@ -73,7 +73,7 @@ def default_data() -> dict:
         "members":        [],
         "expenses":       [],
         "settlements":    [],
-        "tripCurrency":   {"base": "SGD", "rates": {"MAD": 0.14, "EUR": 1.45, "USD": 1.35}}
+        "tripCurrency":   {"base": "SGD", "rates": {"MAD": 0.29, "EUR": 1.45, "USD": 1.35}}
     }
 
 
