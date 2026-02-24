@@ -485,6 +485,10 @@
   ::placeholder { color: var(--text3); }
   input[type=color]    { height: 44px; padding: 4px 8px; cursor: pointer; }
   input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer; flex-shrink: 0; }
+  input[type=date], input[type=time] { color-scheme: dark; }
+  .custom-check { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .custom-check.checked .check-box { background: var(--gold); border-color: var(--gold); }
+  .custom-check.checked .check-tick { display: block; }
 
   .btn-primary {
     width: 100%;
@@ -1035,24 +1039,18 @@ async function searchWxPlace() {
   }
 }
 
-function updateWxTag() {
-  const from = document.getElementById('f-wxfrom')?.value;
-  const to   = document.getElementById('f-wxto')?.value;
-  const tagEl = document.getElementById('f-wxtag');
-  if (!from || !tagEl) return;
-  const d1 = new Date(from + 'T12:00:00');
-  const d2 = to ? new Date(to + 'T12:00:00') : null;
-  const s = d => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
-  tagEl.value = (d2 && d2 > d1) ? s(d1) + '–' + s(d2) : s(d1);
-}
+function updateWxTag() { /* tag auto-generated on submit */ }
 
 async function submitWxLoc() {
   const name = document.getElementById('f-wxname')?.value.trim();
-  const tag  = document.getElementById('f-wxtag')?.value.trim() || '';
   const from = document.getElementById('f-wxfrom')?.value;
   const to   = document.getElementById('f-wxto')?.value || from;
-  const wind = document.getElementById('f-wxwind')?.checked || false;
-  const snow = document.getElementById('f-wxsnow')?.checked || false;
+  const wind = document.getElementById('f-wxwind')?.classList.contains('checked') || false;
+  const snow = document.getElementById('f-wxsnow')?.classList.contains('checked') || false;
+  const _d1 = from ? new Date(from + 'T12:00:00') : null;
+  const _d2 = (to && to !== from) ? new Date(to + 'T12:00:00') : null;
+  const _s  = d => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
+  const tag  = _d1 ? ((_d2 && _d2 > _d1) ? _s(_d1) + '–' + _s(_d2) : _s(_d1)) : '';
   if (!name || !from) { alert('Name and start date are required'); return; }
   let lat, lon;
   if (_wxLocGeo) {
@@ -1205,13 +1203,13 @@ function sheetContent(type) {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="field">
               <label>Check-in</label>
-              <input id="f-checkin" type="date" value="${a?.checkin || ''}" style="color-scheme:dark">
-              <input id="f-checkin-time" type="time" value="${a?.checkinTime || ''}" style="color-scheme:dark;margin-top:6px">
+              <input id="f-checkin" type="date" value="${a?.checkin || ''}">
+              <input id="f-checkin-time" type="time" value="${a?.checkinTime || ''}" style="margin-top:6px">
             </div>
             <div class="field">
               <label>Check-out</label>
-              <input id="f-checkout" type="date" value="${a?.checkout || ''}" style="color-scheme:dark">
-              <input id="f-checkout-time" type="time" value="${a?.checkoutTime || ''}" style="color-scheme:dark;margin-top:6px">
+              <input id="f-checkout" type="date" value="${a?.checkout || ''}">
+              <input id="f-checkout-time" type="time" value="${a?.checkoutTime || ''}" style="margin-top:6px">
             </div>
           </div>
           <div class="field"><label>Google Maps URL (optional)</label><input id="f-maps" type="url" value="${a?.mapsUrl || ''}" placeholder="https://maps.app.goo.gl/..."></div>
@@ -1267,7 +1265,7 @@ function sheetContent(type) {
             </select>
           </div>` : ''}
           <div class="field"><label>Stop Name</label><input id="f-name" value="${stop?.name || ''}" placeholder="Hotel check-in, Dinner, Trailhead…" autocomplete="off"></div>
-          <div class="field"><label>Time</label><input id="f-time" type="time" value="${stop?.time || ''}" style="color-scheme:dark"></div>
+          <div class="field"><label>Time</label><input id="f-time" type="time" value="${stop?.time || ''}"></div>
           <div class="field"><label>Google Maps URL (optional)</label><input id="f-stopmaps" type="url" value="${stop?.mapsUrl || ''}" placeholder="https://maps.app.goo.gl/…"></div>
           <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Reserve in advance, checkout 11am…">${stop?.note || ''}</textarea></div>
           <button class="btn-primary" onclick="submitStop()">${editing ? 'Save Changes' : 'Add Stop'}</button>
@@ -1311,15 +1309,20 @@ function sheetContent(type) {
             <div id="wx-geo-result" style="font-size:12px;margin-top:6px;color:var(--text3)">${loc ? `Current: ${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)} — search to change` : 'Search to set coordinates'}</div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="field"><label>From</label><input id="f-wxfrom" type="date" value="${loc?.dateFrom || ''}" oninput="updateWxTag()"></div>
-            <div class="field"><label>To (optional)</label><input id="f-wxto" type="date" value="${loc?.dateTo || ''}" oninput="updateWxTag()"></div>
+            <div class="field"><label>From</label><input id="f-wxfrom" type="date" value="${loc?.dateFrom || ''}"></div>
+            <div class="field"><label>To (optional)</label><input id="f-wxto" type="date" value="${loc?.dateTo || ''}"></div>
           </div>
-          <div class="field"><label>Label (auto-filled from dates)</label><input id="f-wxtag" value="${loc?.tag || ''}" placeholder="Thu 26, Fri–Sat…" autocomplete="off"></div>
           <div class="field">
             <label>Show extra info</label>
-            <div style="display:flex;gap:20px;margin-top:4px">
-              <label style="${cbStyle}"><input type="checkbox" id="f-wxwind" ${loc?.wind ? 'checked' : ''}> Wind speed</label>
-              <label style="${cbStyle}"><input type="checkbox" id="f-wxsnow" ${loc?.snow ? 'checked' : ''}> Snowfall</label>
+            <div style="display:flex;gap:24px;margin-top:8px">
+              <div class="custom-check ${loc?.wind ? 'checked' : ''}" id="f-wxwind" onclick="this.classList.toggle('checked')">
+                <div class="check-box"><span class="check-tick">✓</span></div>
+                <span style="font-size:14px;color:var(--text)">Wind speed</span>
+              </div>
+              <div class="custom-check ${loc?.snow ? 'checked' : ''}" id="f-wxsnow" onclick="this.classList.toggle('checked')">
+                <div class="check-box"><span class="check-tick">✓</span></div>
+                <span style="font-size:14px;color:var(--text)">Snowfall</span>
+              </div>
             </div>
           </div>
           <div class="field"><label>Forecast link URL (optional)</label><input id="f-wxforecasturl" type="url" value="${loc?.forecastUrl || ''}" placeholder="https://accuweather.com/…"></div>
@@ -1340,7 +1343,7 @@ function sheetContent(type) {
             <div class="field"><label>Emoji</label><input id="f-dayemoji" value="${d?.emoji || '📍'}" placeholder="🚗" autocomplete="off" style="font-size:24px;text-align:center;padding:8px 4px"></div>
             <div class="field"><label>Title</label><input id="f-daytitle" value="${d?.title || ''}" placeholder="Madrid to Burgos…" autocomplete="off"></div>
           </div>
-          <div class="field"><label>Date</label><input id="f-daydate" type="date" value="${d?.date || ''}" style="color-scheme:dark"></div>
+          <div class="field"><label>Date</label><input id="f-daydate" type="date" value="${d?.date || ''}"></div>
           <div class="field"><label>Description (optional)</label><textarea id="f-daydesc" placeholder="Drive up north, check in at 15:00…">${d?.description || ''}</textarea></div>
           <button class="btn-primary" onclick="submitDay()">${editing ? 'Save Changes' : 'Add Day'}</button>
           ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteDay(${_editDayIdx})">× Delete Day &amp; All Stops</button>` : ''}
