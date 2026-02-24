@@ -1173,15 +1173,9 @@ function renderRefs() {
   const cats = appData.refCats || [];
   let html = `<div class="section-head">
     <span class="section-title">Info</span>
-    <div style="display:flex;gap:6px">
-      ${isAdmin ? `<button class="btn-add" onclick="addRefCat()">＋ Category</button>` : ''}
-      ${isAdmin ? `<button class="btn-add" onclick="addRef()">＋ Add</button>` : ''}
-    </div>
+    ${isAdmin ? `<button class="btn-add" onclick="addRefCat()">＋ Category</button>` : ''}
   </div>`;
-  if (!refs.length && !cats.length) {
-    html += `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nothing here yet.<br>${isAdmin ? 'Tap <strong>+ Add</strong> to add a link, file, or note.' : 'Admin will add info here.'}</div></div>`;
-    return html;
-  }
+
   // Group items by category
   const bycat = {};
   refs.forEach(r => {
@@ -1189,24 +1183,45 @@ function renderRefs() {
     if (!bycat[k]) bycat[k] = [];
     bycat[k].push(r);
   });
-  // Render each named category
+
+  // Named categories as collapsible cards with embedded add row
   cats.forEach((cat, ci) => {
     const items = bycat[cat.id] || [];
-    html += `<div class="section-head" style="margin-top:8px">
-      <span class="section-title">${cat.icon} ${cat.label}</span>
-      ${isAdmin ? `<span onclick="editRefCat(${ci})" style="color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px">✏️</span>` : ''}
-    </div>`;
+    html += `<div class="card open" id="refcat-${cat.id}">
+      <div class="card-header" onclick="toggleCard('refcat-${cat.id}')">
+        <div class="card-emoji">${cat.icon}</div>
+        <div class="card-title-group">
+          <div class="card-title">${cat.label}</div>
+          <div class="card-sub">${items.length} item${items.length!==1?'s':''}</div>
+        </div>
+        ${isAdmin ? `<div onclick="event.stopPropagation();editRefCat(${ci})" style="color:var(--text3);font-size:15px;cursor:pointer;padding:4px 8px;flex-shrink:0">✏️</div>` : ''}
+        <div class="card-chevron">›</div>
+      </div>
+      <div class="card-body">`;
     if (!items.length) {
-      html += `<div style="padding:6px 0 12px;color:var(--text3);font-size:13px">${isAdmin ? 'No items yet — tap ＋ Add above' : 'No items yet'}</div>`;
+      html += `<div style="padding:12px 16px;color:var(--text3);font-size:13px">No items yet</div>`;
     }
     items.forEach(r => { html += _refRow(r); });
+    if (isAdmin) html += `<div class="add-stop-row" onclick="addRef('${cat.id}')"><span style="font-size:16px">＋</span> Add item</div>`;
+    html += `</div></div>`;
   });
-  // Uncategorized
+
+  // Uncategorized items
   const uncat = bycat['uncategorized'] || [];
-  if (uncat.length) {
-    if (cats.length) html += `<div class="section-head" style="margin-top:8px"><span class="section-title">Other</span></div>`;
+  if (!cats.length) {
+    // No categories — flat list with add row at bottom
+    if (!uncat.length) {
+      html += `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nothing here yet.<br>${isAdmin ? 'Tap <strong>+ Category</strong> to organise, or add items directly.' : 'Admin will add info here.'}</div></div>`;
+    } else {
+      uncat.forEach(r => { html += _refRow(r); });
+    }
+    if (isAdmin) html += `<div class="add-stop-row" style="border:1px solid var(--border);border-radius:12px;margin-top:2px" onclick="addRef('uncategorized')"><span style="font-size:16px">＋</span> Add item</div>`;
+  } else if (uncat.length) {
+    html += `<div class="section-head" style="margin-top:8px"><span class="section-title">Other</span></div>`;
     uncat.forEach(r => { html += _refRow(r); });
+    if (isAdmin) html += `<div class="add-stop-row" style="border:1px solid var(--border);border-radius:12px;margin-top:2px" onclick="addRef('uncategorized')"><span style="font-size:16px">＋</span> Add item</div>`;
   }
+
   return html;
 }
 
@@ -1235,8 +1250,9 @@ function _refRow(r) {
 let _editRefIdx    = -1;
 let _editRefCatIdx = -1;
 let _refType       = 'link';
+let _defaultRefCat = 'uncategorized';
 
-function addRef()     { _editRefIdx = -1; _refType = 'link'; openSheet('ref-form'); }
+function addRef(catId) { _editRefIdx = -1; _refType = 'link'; _defaultRefCat = catId || 'uncategorized'; openSheet('ref-form'); }
 function editRef(i)   { _editRefIdx = i;  _refType = (appData.refs||[])[i]?.type || 'link'; openSheet('ref-form'); }
 function deleteRef(i) {
   if (!confirm(`Remove "${(appData.refs||[])[i]?.name}"?`)) return;
@@ -1582,7 +1598,8 @@ function sheetContent(type) {
       const r = editing ? (appData.refs||[])[_editRefIdx] : null;
       const type = r?.type || _refType;
       const cats = appData.refCats || [];
-      const catOpts = cats.map(c => `<option value="${c.id}" ${r?.cat === c.id ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('');
+      const _selCat = r?.cat ?? _defaultRefCat;
+      const catOpts = cats.map(c => `<option value="${c.id}" ${_selCat === c.id ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('');
       return `
         <div class="sheet-title">${editing ? 'Edit Item' : 'Add Item'}</div>
         <div class="sheet-body">
@@ -1595,7 +1612,7 @@ function sheetContent(type) {
             </div>
           </div>
           <div class="field"><label>Name / Title</label><input id="f-refname" value="${r?.name || ''}" placeholder="Emergency contacts, Trail map…" autocomplete="off"></div>
-          ${cats.length ? `<div class="field"><label>Category</label><select id="f-refcat"><option value="uncategorized" ${!r?.cat || r.cat==='uncategorized' ? 'selected' : ''}>— No category —</option>${catOpts}</select></div>` : `<input type="hidden" id="f-refcat" value="uncategorized">`}
+          ${cats.length ? `<div class="field"><label>Category</label><select id="f-refcat"><option value="uncategorized" ${_selCat==='uncategorized' ? 'selected' : ''}>— No category —</option>${catOpts}</select></div>` : `<input type="hidden" id="f-refcat" value="uncategorized">`}
           <div id="ref-link-fields" style="display:${type==='link'?'':'none'}">
             <div class="field"><label>URL</label><input id="f-refurl" type="url" value="${r?.url || ''}" placeholder="https://..."></div>
           </div>
