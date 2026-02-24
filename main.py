@@ -120,24 +120,20 @@ ptb_app = Application.builder().token(BOT_TOKEN).build()
 
 # --- Around line 125: Fix the Start Command ---
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_type = update.effective_chat.type
+    # This URL format works in groups! 
+    # Replace 'app' with your short name if you set one in BotFather
+    direct_link = f"https://t.me/{context.bot.username}/app" 
 
-    if chat_type in ["group", "supergroup"]:
-        # In a group, we send a link to the bot's private chat
-        bot_username = context.bot.username
-        await update.message.reply_text(
-            f"🏔 **Trip Planner Mini App**\n\n"
-            f"For security, Mini Apps can only be opened in private chat.\n"
-            f"Tap here to start: [t.me/{bot_username}?start=app](t.me/{bot_username}?start=app)",
-            parse_mode="Markdown"
-        )
-    else:
-        # In a Private Chat, the button works!
-        kb = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🏔 Open Trip Planner", web_app=WebAppInfo(url=WEB_APP_URL))
-        ]])
-        await update.message.reply_text("Tap below to launch the app:", reply_markup=kb)
-        
+    kb = InlineKeyboardMarkup([[
+        InlineKeyboardButton("🏔 Open Trip Planner", url=direct_link)
+    ]])
+
+    await update.message.reply_text(
+        "Click the button below to launch the trip planner! 
+        (Pro tip: Pin this message for the whole group)",
+        reply_markup=kb
+    )
+     
 async def cmd_myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     data = load_data()
