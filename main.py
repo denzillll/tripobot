@@ -120,25 +120,19 @@ ptb_app = Application.builder().token(BOT_TOKEN).build()
 
 # --- Around line 125: Fix the Start Command ---
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # This link opens the app even in Groups!
-    # Format: https://t.me/YourBotUsername/app
-    app_link = f"https://t.me/{context.bot.username}/app"
+    # This is the "Coconut Split" style link
+    # Change 'planner' to whatever Short Name you chose in BotFather
+    app_link = f"https://t.me/{context.bot.username}/planner"
 
     kb = InlineKeyboardMarkup([[
         InlineKeyboardButton(text="🏔 Open Trip Planner", url=app_link)
     ]])
 
-    message_text = (
-        "Welcome! Click the button below to launch the trip planner!\n\n"
-        "📍 **Group Members:** Pin this message so everyone can find the itinerary!"
-    )
-
     await update.message.reply_text(
-        text=message_text,
-        reply_markup=kb,
-        parse_mode="Markdown"
+        "Welcome! Click below to launch the app directly in this chat.",
+        reply_markup=kb
     )
-
+    
 async def cmd_myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     data = load_data()
