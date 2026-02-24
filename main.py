@@ -98,11 +98,12 @@ def default_data() -> dict:
             {"name": "Cantabria Mountain Rescue", "number": "942 748 555"},
             {"name": "Civil Guard", "number": "062"}
         ],
-        "checklist": {
-            "hiking": ["Ankle-support hiking boots", "2L+ water (no refills on Cares)", "Packed lunch + snacks", "Waterproof jacket", "Warm mid-layer", "Beanie + buff", "Sunscreen + sunglasses", "Offline maps downloaded", "First aid + blister kit"],
-            "snowboard": ["Board or skis", "Helmet", "Goggles", "Gloves", "Ski jacket + pants", "Thermal base layers", "Ski socks x2", "Forfait booked online"],
-            "admin": ["Rental car confirmed", "All accoms booked", "Cash for rural areas", "Spain SIM / roaming on", "Fuel up before leaving Madrid"]
-        },
+        "groupChecklist": [
+            {"id": "hiking",    "label": "Hiking Gear",    "icon": "🥾", "items": ["Ankle-support hiking boots", "2L+ water (no refills on Cares)", "Packed lunch + snacks", "Waterproof jacket", "Warm mid-layer", "Beanie + buff", "Sunscreen + sunglasses", "Offline maps downloaded", "First aid + blister kit"]},
+            {"id": "snowboard", "label": "Snowboard Gear", "icon": "⛷️", "items": ["Board or skis", "Helmet", "Goggles", "Gloves", "Ski jacket + pants", "Thermal base layers", "Ski socks x2", "Forfait booked online"]},
+            {"id": "admin",     "label": "Trip Admin",     "icon": "🚗", "items": ["Rental car confirmed", "All accoms booked", "Cash for rural areas", "Spain SIM / roaming on", "Fuel up before leaving Madrid"]}
+        ],
+        "groupProgress": {},
         "wxLocations": [
             {"name": "Burgos",          "tag": "Thu 26",     "lat": 42.3439, "lon": -3.6969, "dateFrom": "2026-02-26", "dateTo": "2026-02-26", "wind": False, "snow": False, "forecastUrl": "https://www.accuweather.com/en/es/burgos/305514/daily-weather-forecast/305514",                                          "forecastName": "AccuWeather Burgos"},
             {"name": "Picos de Europa", "tag": "Fri 27\u2013Sat 28", "lat": 43.2520, "lon": -4.8492, "dateFrom": "2026-02-27", "dateTo": "2026-02-28", "wind": True,  "snow": False, "forecastUrl": "https://www.meteoblue.com/en/weather/week/las-arenas-de-cabrales_spain_3119030",                         "forecastName": "Meteoblue Arenas de Cabrales"},

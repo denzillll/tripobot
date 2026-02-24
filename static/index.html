@@ -362,6 +362,7 @@
     margin-bottom: 10px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 6px;
   }
   .checklist-item {
@@ -716,7 +717,10 @@ const userId = tg?.initDataUnsafe?.user?.id || null;
 let appData = null;
 let isAdmin = false;
 let activeTab = 'itinerary';
-let checkedItems = JSON.parse(localStorage.getItem('checked') || '{}');
+function getPersonalItems()    { return JSON.parse(localStorage.getItem('personal_items_'+(userId||'anon')) || '[]'); }
+function setPersonalItems(d)   { localStorage.setItem('personal_items_'+(userId||'anon'), JSON.stringify(d)); }
+function getPersonalProgress() { return JSON.parse(localStorage.getItem('personal_prog_'+(userId||'anon')) || '{}'); }
+function setPersonalProgress(d){ localStorage.setItem('personal_prog_'+(userId||'anon'), JSON.stringify(d)); }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
@@ -726,6 +730,16 @@ async function init() {
       userId ? fetch(`/api/is_admin?user_id=${userId}`).then(r => r.json()) : Promise.resolve({is_admin: false})
     ]);
     appData = dataRes;
+    // Migrate old flat checklist → groupChecklist array
+    if (appData.checklist && !appData.groupChecklist) {
+      const _m = [{id:'hiking',label:'Hiking Gear',icon:'🥾'},{id:'snowboard',label:'Snowboard Gear',icon:'⛷️'},{id:'admin',label:'Trip Admin',icon:'🚗'}];
+      appData.groupChecklist = _m.map(c => ({...c, items: appData.checklist[c.id] || []}));
+      delete appData.checklist;
+      appData.groupProgress = {};
+      saveData();
+    }
+    if (!appData.groupChecklist) appData.groupChecklist = [];
+    if (!appData.groupProgress)  appData.groupProgress  = {};
     isAdmin = adminRes.is_admin;
     document.getElementById('trip-name').textContent = appData.trip.name;
     document.getElementById('trip-dates').textContent = appData.trip.dates;
@@ -1100,32 +1114,77 @@ function deleteLink(i) {
 
 // ── More ──────────────────────────────────────────────────────────────────────
 function renderMore() {
-  // Checklist
-  const cats = {
-    hiking: {label: 'Hiking Gear', icon: '🥾'},
-    snowboard: {label: 'Snowboard Gear', icon: '⛷️'},
-    admin: {label: 'Trip Admin', icon: '🚗'}
-  };
-  let checklistHtml = '';
-  Object.entries(cats).forEach(([cat, {label, icon}]) => {
-    const items = appData.checklist[cat] || [];
-    checklistHtml += `<div class="checklist-group">
-      <div class="checklist-group-title">${icon} ${label}</div>`;
-    items.forEach((item, i) => {
-      const key = `${cat}-${i}`;
-      const done = !!checkedItems[key];
-      checklistHtml += `
-        <div class="checklist-item ${done ? 'done' : ''}" onclick="toggleCheck('${key}', this)">
+  // ── Group checklist ──
+  const groupCats = appData.groupChecklist || [];
+  const groupProg = appData.groupProgress  || {};
+  let groupHtml = '';
+  groupCats.forEach((cat, ci) => {
+    const doneCount = cat.items.filter((_, ii) => groupProg[`${cat.id}-${ii}`]).length;
+    groupHtml += `<div class="checklist-group">
+      <div class="checklist-group-title">
+        <span>${cat.icon} ${cat.label}</span>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="font-size:12px;color:var(--text3);font-family:'JetBrains Mono',monospace;font-weight:400">${doneCount}/${cat.items.length}</span>
+          ${isAdmin ? `<span onclick="addGroupItem(${ci})" style="color:var(--gold2);cursor:pointer;font-size:17px;line-height:1">＋</span>` : ''}
+          ${isAdmin ? `<span onclick="editGroupCat(${ci})" style="color:var(--text3);cursor:pointer;font-size:13px">✏️</span>` : ''}
+        </div>
+      </div>`;
+    if (!cat.items.length) {
+      groupHtml += `<div style="padding:8px 0;color:var(--text3);font-size:13px">${isAdmin ? 'Tap ＋ to add items' : 'No items yet'}</div>`;
+    }
+    cat.items.forEach((item, ii) => {
+      const key = `${cat.id}-${ii}`;
+      const done = !!groupProg[key];
+      groupHtml += `
+        <div class="checklist-item ${done ? 'done' : ''}" onclick="toggleGroupCheck('${cat.id}',${ii})">
           <div class="check-box"><span class="check-tick">✓</span></div>
-          <span class="check-label">${item}</span>
+          <span class="check-label" style="flex:1">${item}</span>
+          ${isAdmin ? `<span onclick="event.stopPropagation();deleteGroupItem(${ci},${ii})" style="color:var(--danger);font-size:20px;padding:0 4px;line-height:1;flex-shrink:0">×</span>` : ''}
         </div>`;
     });
-    checklistHtml += `</div>`;
+    groupHtml += `</div>`;
   });
+  if (!groupCats.length) {
+    groupHtml = `<div style="padding:12px 0 4px;color:var(--text3);font-size:13px;text-align:center">${isAdmin ? 'No categories yet — tap ＋ Category' : 'No group checklist yet'}</div>`;
+  }
 
-  // Emergency
+  // ── Personal checklist ──
+  const personalCats = getPersonalItems();
+  const personalProg = getPersonalProgress();
+  let personalHtml = '';
+  personalCats.forEach((cat, ci) => {
+    const doneCount = cat.items.filter((_, ii) => personalProg[`${cat.id}-${ii}`]).length;
+    personalHtml += `<div class="checklist-group">
+      <div class="checklist-group-title">
+        <span>${cat.icon} ${cat.label}</span>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="font-size:12px;color:var(--text3);font-family:'JetBrains Mono',monospace;font-weight:400">${doneCount}/${cat.items.length}</span>
+          <span onclick="addPersonalItem(${ci})" style="color:var(--gold2);cursor:pointer;font-size:17px;line-height:1">＋</span>
+          <span onclick="editPersonalCat(${ci})" style="color:var(--text3);cursor:pointer;font-size:13px">✏️</span>
+        </div>
+      </div>`;
+    if (!cat.items.length) {
+      personalHtml += `<div style="padding:8px 0;color:var(--text3);font-size:13px">Tap ＋ to add items</div>`;
+    }
+    cat.items.forEach((item, ii) => {
+      const key = `${cat.id}-${ii}`;
+      const done = !!personalProg[key];
+      personalHtml += `
+        <div class="checklist-item ${done ? 'done' : ''}" onclick="togglePersonalCheck('${cat.id}',${ii})">
+          <div class="check-box"><span class="check-tick">✓</span></div>
+          <span class="check-label" style="flex:1">${item}</span>
+          <span onclick="event.stopPropagation();deletePersonalItem(${ci},${ii})" style="color:var(--danger);font-size:20px;padding:0 4px;line-height:1;flex-shrink:0">×</span>
+        </div>`;
+    });
+    personalHtml += `</div>`;
+  });
+  if (!personalCats.length) {
+    personalHtml = `<div style="padding:12px 0 4px;color:var(--text3);font-size:13px;text-align:center">No personal list yet — tap ＋ Category</div>`;
+  }
+
+  // ── Emergency ──
   let emergencyHtml = '';
-  appData.emergency.forEach((e, i) => {
+  appData.emergency.forEach(e => {
     const primary = e.number === '112';
     emergencyHtml += `
       <div class="emergency-card ${primary ? 'primary' : ''}">
@@ -1151,20 +1210,123 @@ function renderMore() {
   `;
 
   return `
-    <div class="section-head"><span class="section-title">Packing Checklist</span></div>
-    ${checklistHtml}
+    <div class="section-head">
+      <span class="section-title">🌍 Group Checklist</span>
+      ${isAdmin ? `<button class="btn-add" onclick="addGroupCat()">＋ Category</button>` : ''}
+    </div>
+    ${groupHtml}
+    <div class="section-head" style="margin-top:8px">
+      <span class="section-title">👤 My Checklist</span>
+      <button class="btn-add" onclick="addPersonalCat()">＋ Category</button>
+    </div>
+    ${personalHtml}
     <div class="section-head" style="margin-top:8px"><span class="section-title">Emergency Numbers</span></div>
     ${emergencyHtml}
     ${editSection}
   `;
 }
 
-function toggleCheck(key, el) {
-  const done = !el.classList.contains('done');
-  el.classList.toggle('done', done);
-  checkedItems[key] = done;
-  if (!done) delete checkedItems[key];
-  localStorage.setItem('checked', JSON.stringify(checkedItems));
+// ── Group checklist toggles & CRUD ────────────────────────────────────────────
+function toggleGroupCheck(catId, ii) {
+  const key = `${catId}-${ii}`;
+  if (appData.groupProgress[key]) delete appData.groupProgress[key];
+  else appData.groupProgress[key] = true;
+  renderTab('more');
+  saveData();
+}
+
+let _editGroupCatIdx    = -1;
+let _addGroupItemCatIdx = -1;
+
+function addGroupCat()     { _editGroupCatIdx = -1; openSheet('group-cat-form'); }
+function editGroupCat(ci)  { _editGroupCatIdx = ci; openSheet('group-cat-form'); }
+function deleteGroupCat(ci) {
+  if (!confirm(`Delete "${appData.groupChecklist[ci]?.label}" and all its items?`)) return;
+  appData.groupChecklist.splice(ci, 1);
+  saveData().then(() => { _closeSheet(); renderTab('more'); });
+}
+function submitGroupCat() {
+  const icon  = document.getElementById('f-cat-icon')?.value.trim() || '📋';
+  const label = document.getElementById('f-cat-label')?.value.trim();
+  if (!label) { alert('Category name required'); return; }
+  if (_editGroupCatIdx >= 0) {
+    appData.groupChecklist[_editGroupCatIdx] = { ...appData.groupChecklist[_editGroupCatIdx], icon, label };
+  } else {
+    appData.groupChecklist.push({ id: 'g' + Date.now(), label, icon, items: [] });
+  }
+  saveData().then(() => { _closeSheet(); renderTab('more'); });
+}
+function addGroupItem(ci)  { _addGroupItemCatIdx = ci; openSheet('group-item-form'); }
+function deleteGroupItem(ci, ii) {
+  const cat = appData.groupChecklist[ci];
+  cat.items.splice(ii, 1);
+  // indices shifted — clear all progress keys for this cat
+  Object.keys(appData.groupProgress).forEach(k => { if (k.startsWith(cat.id + '-')) delete appData.groupProgress[k]; });
+  saveData().then(() => renderTab('more'));
+}
+function submitGroupItem() {
+  const text = document.getElementById('f-item-text')?.value.trim();
+  if (!text) { alert('Item text required'); return; }
+  appData.groupChecklist[_addGroupItemCatIdx].items.push(text);
+  saveData().then(() => { _closeSheet(); renderTab('more'); });
+}
+
+// ── Personal checklist toggles & CRUD ────────────────────────────────────────
+function togglePersonalCheck(catId, ii) {
+  const prog = getPersonalProgress();
+  const key  = `${catId}-${ii}`;
+  if (prog[key]) delete prog[key];
+  else prog[key] = true;
+  setPersonalProgress(prog);
+  renderTab('more');
+}
+
+let _editPersonalCatIdx    = -1;
+let _addPersonalItemCatIdx = -1;
+
+function addPersonalCat()    { _editPersonalCatIdx = -1; openSheet('personal-cat-form'); }
+function editPersonalCat(ci) { _editPersonalCatIdx = ci; openSheet('personal-cat-form'); }
+function deletePersonalCat(ci) {
+  const cats = getPersonalItems();
+  if (!confirm(`Delete "${cats[ci]?.label}" and all its items?`)) return;
+  cats.splice(ci, 1);
+  setPersonalItems(cats);
+  _closeSheet();
+  renderTab('more');
+}
+function submitPersonalCat() {
+  const icon  = document.getElementById('f-cat-icon')?.value.trim() || '🎒';
+  const label = document.getElementById('f-cat-label')?.value.trim();
+  if (!label) { alert('Category name required'); return; }
+  const cats = getPersonalItems();
+  if (_editPersonalCatIdx >= 0) {
+    cats[_editPersonalCatIdx] = { ...cats[_editPersonalCatIdx], icon, label };
+  } else {
+    cats.push({ id: 'p' + Date.now(), label, icon, items: [] });
+  }
+  setPersonalItems(cats);
+  _closeSheet();
+  renderTab('more');
+}
+function addPersonalItem(ci)  { _addPersonalItemCatIdx = ci; openSheet('personal-item-form'); }
+function deletePersonalItem(ci, ii) {
+  const cats = getPersonalItems();
+  const catId = cats[ci].id;
+  cats[ci].items.splice(ii, 1);
+  setPersonalItems(cats);
+  const prog = getPersonalProgress();
+  Object.keys(prog).forEach(k => { if (k.startsWith(catId + '-')) delete prog[k]; });
+  setPersonalProgress(prog);
+  renderTab('more');
+}
+function submitPersonalItem() {
+  const text = document.getElementById('f-item-text')?.value.trim();
+  if (!text) { alert('Item text required'); return; }
+  const cats = getPersonalItems();
+  cats[_addPersonalItemCatIdx].items.push(text);
+  setPersonalItems(cats);
+  _closeSheet();
+  renderTab('more');
 }
 
 // ── Bottom Sheet ──────────────────────────────────────────────────────────────
@@ -1374,6 +1536,55 @@ function sheetContent(type) {
         <div class="sheet-sub">Tap any stop to open in Google Maps</div>
         <div class="sheet-body">${destHtml}<button class="btn-secondary" style="margin-top:16px" onclick="_closeSheet()">Close</button></div>`;
     }
+
+    case 'group-cat-form': {
+      const editing = _editGroupCatIdx >= 0;
+      const cat = editing ? appData.groupChecklist[_editGroupCatIdx] : null;
+      return `
+        <div class="sheet-title">${editing ? 'Edit Category' : 'Add Group Category'}</div>
+        <div class="sheet-body">
+          <div style="display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:start">
+            <div class="field"><label>Icon</label><input id="f-cat-icon" value="${cat?.icon || ''}" placeholder="🥾" maxlength="4" style="font-size:24px;text-align:center;padding:8px 4px"></div>
+            <div class="field"><label>Name</label><input id="f-cat-label" value="${cat?.label || ''}" placeholder="Hiking Gear" autocomplete="off"></div>
+          </div>
+          <button class="btn-primary" onclick="submitGroupCat()">${editing ? 'Save Changes' : 'Add Category'}</button>
+          ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteGroupCat(${_editGroupCatIdx})">× Delete Category</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
+
+    case 'group-item-form': return `
+      <div class="sheet-title">Add Item</div>
+      <div class="sheet-body">
+        <div class="field"><label>Item</label><input id="f-item-text" placeholder="e.g. Waterproof jacket" autocomplete="off"></div>
+        <button class="btn-primary" onclick="submitGroupItem()">Add Item</button>
+        <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+      </div>`;
+
+    case 'personal-cat-form': {
+      const editing = _editPersonalCatIdx >= 0;
+      const cats = getPersonalItems();
+      const cat = editing ? cats[_editPersonalCatIdx] : null;
+      return `
+        <div class="sheet-title">${editing ? 'Edit Category' : 'Add My Category'}</div>
+        <div class="sheet-body">
+          <div style="display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:start">
+            <div class="field"><label>Icon</label><input id="f-cat-icon" value="${cat?.icon || ''}" placeholder="🎒" maxlength="4" style="font-size:24px;text-align:center;padding:8px 4px"></div>
+            <div class="field"><label>Name</label><input id="f-cat-label" value="${cat?.label || ''}" placeholder="My Gear" autocomplete="off"></div>
+          </div>
+          <button class="btn-primary" onclick="submitPersonalCat()">${editing ? 'Save Changes' : 'Add Category'}</button>
+          ${editing ? `<button class="btn-secondary btn-danger" onclick="deletePersonalCat(${_editPersonalCatIdx})">× Delete Category</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
+
+    case 'personal-item-form': return `
+      <div class="sheet-title">Add Item</div>
+      <div class="sheet-body">
+        <div class="field"><label>Item</label><input id="f-item-text" placeholder="e.g. Passport" autocomplete="off"></div>
+        <button class="btn-primary" onclick="submitPersonalItem()">Add Item</button>
+        <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+      </div>`;
 
     default: return '';
   }
