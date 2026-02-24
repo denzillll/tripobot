@@ -882,7 +882,7 @@ async function loadLiveWeather() {
         const snow  = d.snowfall_sum[idx];
         let meta = `💧 ${precP}%`;
         if (precM > 0) meta += ` · ${precM.toFixed(1)}mm`;
-        if (loc.wind || wind > 25) meta += ` · 💨 ${wind} km/h`;
+        if (loc.wind) meta += ` · 💨 ${wind} km/h`;
         if (loc.snow) meta += snow > 0 ? ` · ❄️ ${snow}cm new` : ` · ❄️ no new snow`;
         html += `<div class="wx-day-row">
           <span class="wx-day-label">${day}</span>
@@ -891,6 +891,11 @@ async function loadLiveWeather() {
           <div class="wx-temps"><div class="wx-hi">${hi}°</div><div class="wx-lo">${lo}°</div></div>
         </div>`;
       });
+      if (loc.forecastUrl) {
+        html += `<a href="${loc.forecastUrl}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:1px solid var(--border);color:var(--text3);font-size:11px;text-decoration:none;font-family:'JetBrains Mono',monospace;letter-spacing:0.3px">
+          <span style="flex:1">${loc.forecastName || 'Detailed forecast'}</span><span>↗</span>
+        </a>`;
+      }
       html += '</div>';
     });
     el.innerHTML = html;
@@ -900,22 +905,10 @@ async function loadLiveWeather() {
 }
 
 function renderWeather() {
-  let html = `
+  const html = `
     <div class="section-head"><span class="section-title">Live Weather</span>${isAdmin ? `<button class="btn-add" onclick="addWxLoc()">＋ Add</button>` : ''}</div>
-    <div id="live-weather"><div class="spinner" style="margin:20px auto"></div></div>
-    <div class="section-head" style="margin-top:20px"><span class="section-title">Forecasts</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-weather')">＋ Add</button>` : ''}</div>
-    <div class="weather-note">⚠️ Check forecasts the morning of each hike</div>`;
-  appData.weather.forEach((w, i) => {
-    html += `
-    <a class="link-row" href="${w.url}" target="_blank">
-      <span class="link-row-icon">🌤</span>
-      <div class="link-row-content">
-        <div class="link-row-name">${w.name}</div>
-        ${w.day ? `<div class="link-row-sub">${w.day}</div>` : ''}
-      </div>
-      ${isAdmin ? `<div onclick="event.preventDefault();deleteWeather(${i})" style="color:var(--danger);font-size:18px;padding:0 4px">×</div>` : `<span class="link-arrow">↗</span>`}
-    </a>`;
-  });
+    <div class="weather-note">⚠️ Check forecasts the morning of each activity</div>
+    <div id="live-weather"><div class="spinner" style="margin:20px auto"></div></div>`;
   setTimeout(loadLiveWeather, 0);
   return html;
 }
@@ -966,6 +959,17 @@ async function searchWxPlace() {
   }
 }
 
+function updateWxTag() {
+  const from = document.getElementById('f-wxfrom')?.value;
+  const to   = document.getElementById('f-wxto')?.value;
+  const tagEl = document.getElementById('f-wxtag');
+  if (!from || !tagEl) return;
+  const d1 = new Date(from + 'T12:00:00');
+  const d2 = to ? new Date(to + 'T12:00:00') : null;
+  const s = d => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
+  tagEl.value = (d2 && d2 > d1) ? s(d1) + '–' + s(d2) : s(d1);
+}
+
 async function submitWxLoc() {
   const name = document.getElementById('f-wxname')?.value.trim();
   const tag  = document.getElementById('f-wxtag')?.value.trim() || '';
@@ -983,7 +987,10 @@ async function submitWxLoc() {
   } else {
     alert('Please search for a location first'); return;
   }
-  const loc = { name, tag, lat, lon, dateFrom: from, dateTo: to, wind, snow };
+  let forecastUrl  = document.getElementById('f-wxforecasturl')?.value.trim() || '';
+  if (forecastUrl && !forecastUrl.match(/^https?:\/\//i)) forecastUrl = 'https://' + forecastUrl;
+  const forecastName = document.getElementById('f-wxforecastname')?.value.trim() || '';
+  const loc = { name, tag, lat, lon, dateFrom: from, dateTo: to, wind, snow, forecastUrl, forecastName };
   if (!appData.wxLocations) appData.wxLocations = [];
   if (_wxLocEditIdx >= 0) appData.wxLocations[_wxLocEditIdx] = loc;
   else appData.wxLocations.push(loc);
@@ -1206,11 +1213,11 @@ function sheetContent(type) {
             </div>
             <div id="wx-geo-result" style="font-size:12px;margin-top:6px;color:var(--text3)">${loc ? `Current: ${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)} — search to change` : 'Search to set coordinates'}</div>
           </div>
-          <div class="field"><label>Label (e.g. Fri–Sat)</label><input id="f-wxtag" value="${loc?.tag || ''}" placeholder="Thu, Fri–Sat…" autocomplete="off"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="field"><label>From</label><input id="f-wxfrom" type="date" value="${loc?.dateFrom || ''}"></div>
-            <div class="field"><label>To (optional)</label><input id="f-wxto" type="date" value="${loc?.dateTo || ''}"></div>
+            <div class="field"><label>From</label><input id="f-wxfrom" type="date" value="${loc?.dateFrom || ''}" oninput="updateWxTag()"></div>
+            <div class="field"><label>To (optional)</label><input id="f-wxto" type="date" value="${loc?.dateTo || ''}" oninput="updateWxTag()"></div>
           </div>
+          <div class="field"><label>Label (auto-filled from dates)</label><input id="f-wxtag" value="${loc?.tag || ''}" placeholder="Thu 26, Fri–Sat…" autocomplete="off"></div>
           <div class="field">
             <label>Show extra info</label>
             <div style="display:flex;gap:20px;margin-top:4px">
@@ -1218,6 +1225,8 @@ function sheetContent(type) {
               <label style="${cbStyle}"><input type="checkbox" id="f-wxsnow" ${loc?.snow ? 'checked' : ''}> Snowfall</label>
             </div>
           </div>
+          <div class="field"><label>Forecast link URL (optional)</label><input id="f-wxforecasturl" type="url" value="${loc?.forecastUrl || ''}" placeholder="https://accuweather.com/…"></div>
+          <div class="field"><label>Forecast link name</label><input id="f-wxforecastname" value="${loc?.forecastName || ''}" placeholder="AccuWeather Burgos…" autocomplete="off"></div>
           <button class="btn-primary" onclick="submitWxLoc()">${editing ? 'Save Changes' : 'Add Location'}</button>
           ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteWxLoc(${_wxLocEditIdx})">× Delete Location</button>` : ''}
           <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
