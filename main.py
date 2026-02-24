@@ -120,18 +120,24 @@ ptb_app = Application.builder().token(BOT_TOKEN).build()
 
 # --- Around line 125: Fix the Start Command ---
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logging.info(f"DEBUG: Using URL {WEB_APP_URL}")
-    
-    # Use a Reply Keyboard instead of an Inline Keyboard
-    kb = ReplyKeyboardMarkup([
-        [KeyboardButton(text="🏔 Open Trip Planner", web_app=WebAppInfo(url=WEB_APP_URL))]
-    ], resize_keyboard=True)
-    
-    await update.message.reply_text(
-        "Welcome! Use the button below to launch the planner.",
-        reply_markup=kb
-    )
+    chat_type = update.effective_chat.type
 
+    if chat_type in ["group", "supergroup"]:
+        # In a group, we send a link to the bot's private chat
+        bot_username = context.bot.username
+        await update.message.reply_text(
+            f"🏔 **Trip Planner Mini App**\n\n"
+            f"For security, Mini Apps can only be opened in private chat.\n"
+            f"Tap here to start: [t.me/{bot_username}?start=app](t.me/{bot_username}?start=app)",
+            parse_mode="Markdown"
+        )
+    else:
+        # In a Private Chat, the button works!
+        kb = InlineKeyboardMarkup([[
+            InlineKeyboardButton("🏔 Open Trip Planner", web_app=WebAppInfo(url=WEB_APP_URL))
+        ]])
+        await update.message.reply_text("Tap below to launch the app:", reply_markup=kb)
+        
 async def cmd_myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     data = load_data()
