@@ -748,7 +748,18 @@ function renderTab(tab) {
 
 // ── Itinerary ─────────────────────────────────────────────────────────────────
 function renderItinerary() {
-  let html = `<div class="section-head"><span class="section-title">Itinerary</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-stop')">＋ Add stop</button>` : ''}</div>`;
+  let html = `<div class="section-head">
+    <span class="section-title">Itinerary</span>
+    <div style="display:flex;gap:6px">
+      <button class="btn-add" onclick="openSheet('maps-view')">📍 Map</button>
+      ${isAdmin ? `<button class="btn-add" onclick="addDay()">＋ Day</button>` : ''}
+      ${isAdmin ? `<button class="btn-add" onclick="openSheet('add-stop')">＋ Stop</button>` : ''}
+    </div>
+  </div>`;
+  if (!appData.days.length) {
+    html += `<div class="empty"><div class="empty-icon">🗓</div><div class="empty-text">No days yet.<br>${isAdmin ? 'Tap <strong>+ Day</strong> to add your first day.' : ''}</div></div>`;
+    return html;
+  }
   appData.days.forEach((day, di) => {
     const stopCount = day.stops.length;
     html += `
@@ -759,6 +770,7 @@ function renderItinerary() {
           <div class="card-title">${day.label}</div>
           <div class="card-sub">${day.title} · ${stopCount} stop${stopCount!==1?'s':''}</div>
         </div>
+        ${isAdmin ? `<div onclick="event.stopPropagation();editDay(${di})" style="color:var(--text3);font-size:15px;cursor:pointer;padding:4px 6px;flex-shrink:0">✏️</div>` : ''}
         <div class="card-chevron">›</div>
       </div>
       <div class="card-body">`;
@@ -771,7 +783,10 @@ function renderItinerary() {
             <div class="stop-name">${stop.name}</div>
             ${stop.note ? `<div class="stop-note">${stop.note}</div>` : ''}
           </div>
-          ${isAdmin ? `<div onclick="deleteStop(${di},${si})" style="color:var(--text3);font-size:18px;padding:0 4px;cursor:pointer;flex-shrink:0">×</div>` : ''}
+          <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+            ${stop.mapsUrl ? `<a href="${stop.mapsUrl}" target="_blank" onclick="event.stopPropagation()" style="color:var(--text2);font-size:15px;text-decoration:none;padding:2px 4px">📍</a>` : ''}
+            ${isAdmin ? `<div onclick="deleteStop(${di},${si})" style="color:var(--text3);font-size:18px;padding:0 4px;cursor:pointer">×</div>` : ''}
+          </div>
         </div>`;
     });
     html += `</div></div>`;
@@ -787,6 +802,32 @@ function deleteStop(di, si) {
   if (!confirm(`Remove "${appData.days[di].stops[si].name}"?`)) return;
   appData.days[di].stops.splice(si, 1);
   saveData().then(() => renderTab('itinerary'));
+}
+
+// ── Day CRUD ──────────────────────────────────────────────────────────────────
+let _editDayIdx = -1;
+
+function addDay() { _editDayIdx = -1; openSheet('day-form'); }
+function editDay(di) { _editDayIdx = di; openSheet('day-form'); }
+
+function deleteDay(di) {
+  if (!confirm(`Remove day "${appData.days[di].label}" and all its stops?`)) return;
+  appData.days.splice(di, 1);
+  saveData().then(() => { _closeSheet(); renderTab('itinerary'); });
+}
+
+function submitDay() {
+  const label = document.getElementById('f-daylabel')?.value.trim();
+  const title = document.getElementById('f-daytitle')?.value.trim();
+  const emoji = document.getElementById('f-dayemoji')?.value.trim() || '📍';
+  if (!label || !title) { alert('Label and title are required'); return; }
+  if (_editDayIdx >= 0) {
+    appData.days[_editDayIdx] = { ...appData.days[_editDayIdx], label, title, emoji };
+  } else {
+    const id = `day-${Date.now()}`;
+    appData.days.push({ id, label, title, emoji, stops: [] });
+  }
+  saveData().then(() => { _closeSheet(); renderTab('itinerary'); });
 }
 
 // ── Accommodations ────────────────────────────────────────────────────────────
@@ -1167,12 +1208,17 @@ function sheetContent(type) {
           <div class="day-opt-emoji">${d.emoji}</div>
           <div class="day-opt-label">${d.label}</div>
         </div>`).join('');
+      const accomOpts = appData.accoms.length
+        ? `<option value="">— None —</option>` + appData.accoms.map((a,i) => `<option value="${i}">${a.name}</option>`).join('')
+        : `<option value="">No accommodations added</option>`;
       return `
         <div class="sheet-title">Add Itinerary Stop</div>
         <div class="sheet-body">
           <div class="field"><label>Day</label><div class="day-selector" id="day-selector">${dayOpts}</div></div>
-          <div class="field"><label>Time</label><input id="f-time" placeholder="19:30, ~21:00..." autocomplete="off"></div>
+          <div class="field"><label>Time</label><input id="f-time" type="time" style="color-scheme:dark"></div>
+          ${appData.accoms.length ? `<div class="field"><label>Accommodation (optional — pre-fills name & map)</label><select id="f-accomsel" onchange="prefillFromAccom()">${accomOpts}</select></div>` : ''}
           <div class="field"><label>Stop name</label><input id="f-name" placeholder="Dinner at La Sidreria..." autocomplete="off"></div>
+          <div class="field"><label>Google Maps URL (optional)</label><input id="f-stopmaps" type="url" placeholder="https://maps.app.goo.gl/..."></div>
           <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Reserve in advance, try the cider..."></textarea></div>
           <button class="btn-primary" onclick="submitStop()">Add Stop</button>
           <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
@@ -1233,6 +1279,53 @@ function sheetContent(type) {
         </div>`;
     }
 
+    case 'day-form': {
+      const editing = _editDayIdx >= 0;
+      const d = editing ? appData.days[_editDayIdx] : null;
+      return `
+        <div class="sheet-title">${editing ? 'Edit Day' : 'Add Day'}</div>
+        <div class="sheet-body">
+          <div class="field"><label>Emoji</label><input id="f-dayemoji" value="${d?.emoji || '📍'}" placeholder="🚗 🥾 🏔 ⛷️…" autocomplete="off" style="font-size:22px;text-align:center;letter-spacing:4px"></div>
+          <div class="field"><label>Label</label><input id="f-daylabel" value="${d?.label || ''}" placeholder="Thu 26 Feb…" autocomplete="off"></div>
+          <div class="field"><label>Title</label><input id="f-daytitle" value="${d?.title || ''}" placeholder="Madrid to Burgos…" autocomplete="off"></div>
+          <button class="btn-primary" onclick="submitDay()">${editing ? 'Save Changes' : 'Add Day'}</button>
+          ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteDay(${_editDayIdx})">× Delete Day &amp; All Stops</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
+
+    case 'maps-view': {
+      let inner = '';
+      const routeNames = [];
+      appData.days.forEach(day => {
+        if (!day.stops.length) return;
+        inner += `<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold2);letter-spacing:1px;text-transform:uppercase;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${day.emoji} ${day.label} · ${day.title}</div>`;
+        day.stops.forEach(stop => {
+          routeNames.push(stop.name);
+          const hasMap = !!stop.mapsUrl;
+          inner += `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);min-width:44px;flex-shrink:0;padding-top:1px">${stop.time}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:500;color:var(--text)">${stop.name}</div>
+              ${stop.note ? `<div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.4">${stop.note}</div>` : ''}
+            </div>
+            ${hasMap ? `<a href="${stop.mapsUrl}" target="_blank" style="color:var(--gold2);font-size:16px;text-decoration:none;flex-shrink:0;padding:0 4px">📍</a>` : '<span style="width:28px;flex-shrink:0"></span>'}
+          </div>`;
+        });
+      });
+      if (!inner) inner = `<div class="empty"><div class="empty-icon">🗓</div><div class="empty-text">No stops yet.</div></div>`;
+      const routeUrl = routeNames.length >= 2
+        ? `https://www.google.com/maps/dir/${routeNames.map(n => encodeURIComponent(n)).join('/')}`
+        : null;
+      return `
+        <div class="sheet-title">📍 Trip Map</div>
+        <div class="sheet-body">
+          ${inner}
+          ${routeUrl ? `<a href="${routeUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--gold);color:#000;border-radius:12px;padding:14px;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;text-decoration:none;margin-top:20px">🗺️ Open full route in Maps</a>` : ''}
+          <button class="btn-secondary" style="margin-top:10px" onclick="_closeSheet()">Close</button>
+        </div>`;
+    }
+
     default: return '';
   }
 }
@@ -1285,14 +1378,28 @@ function submitLink() {
   saveData().then(() => { _closeSheet(); renderTab('links'); });
 }
 
+function prefillFromAccom() {
+  const sel = document.getElementById('f-accomsel');
+  if (!sel || sel.value === '') return;
+  const accom = appData.accoms[parseInt(sel.value)];
+  if (!accom) return;
+  const nameEl = document.getElementById('f-name');
+  if (nameEl && !nameEl.value) nameEl.value = accom.name;
+  const mapsEl = document.getElementById('f-stopmaps');
+  if (mapsEl && !mapsEl.value && accom.mapsUrl) mapsEl.value = accom.mapsUrl;
+}
+
 function submitStop() {
   const selDay = document.querySelector('.day-opt.selected')?.dataset.day;
-  const time   = document.getElementById('f-time')?.value.trim();
+  const time   = document.getElementById('f-time')?.value;
   const name   = document.getElementById('f-name')?.value.trim();
   if (!selDay || !time || !name) { alert('Day, time and name are required'); return; }
   const day = appData.days.find(d => d.id === selDay);
   if (!day) return;
-  day.stops.push({ time, name, note: document.getElementById('f-notes')?.value.trim() || '' });
+  let mapsUrl = document.getElementById('f-stopmaps')?.value.trim() || '';
+  if (mapsUrl && !mapsUrl.match(/^https?:\/\//i)) mapsUrl = 'https://' + mapsUrl;
+  day.stops.push({ time, name, note: document.getElementById('f-notes')?.value.trim() || '', mapsUrl });
+  day.stops.sort((a, b) => a.time.localeCompare(b.time));
   saveData().then(() => { _closeSheet(); renderTab('itinerary'); });
 }
 
