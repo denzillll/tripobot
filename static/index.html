@@ -90,6 +90,20 @@
     letter-spacing: 0.5px;
     position: relative;
   }
+  .trip-countdown {
+    display: inline-block;
+    margin-top: 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    position: relative;
+  }
+  .trip-countdown.pre-trip  { background: var(--gold-dim); border: 1px solid #c8912a44; color: var(--gold2); }
+  .trip-countdown.on-trip   { background: #4ade8018; border: 1px solid #4ade8044; color: var(--success); }
+  .trip-countdown.post-trip { display: none; }
 
   /* ── Tabs ── */
   #tabs {
@@ -1006,6 +1020,7 @@
     </svg>
     <div class="trip-name" id="trip-name">Loading...</div>
     <div class="trip-dates" id="trip-dates"></div>
+    <div class="trip-countdown" id="trip-countdown"></div>
   </div>
 
   <!-- Tab bar -->
@@ -1143,6 +1158,7 @@ async function init() {
     isAdmin = adminRes.is_admin;
     document.getElementById('trip-name').textContent = appData.trip.name;
     document.getElementById('trip-dates').textContent = appData.trip.dates;
+    renderCountdown();
     document.getElementById('loading-spinner').remove();
     renderTab('itinerary');
   } catch(e) {
@@ -1159,6 +1175,27 @@ async function saveData() {
 }
 
 // ── Tab navigation ────────────────────────────────────────────────────────────
+function renderCountdown() {
+  const el = document.getElementById('trip-countdown');
+  if (!el) return;
+  const dates = (appData.days || []).filter(d => d.date).map(d => d.date).sort();
+  if (!dates.length) { el.className = 'trip-countdown post-trip'; return; }
+  const first = dates[0];
+  const last  = dates[dates.length - 1];
+  const today = new Date().toISOString().slice(0, 10);
+  if (today < first) {
+    const diff = Math.round((new Date(first) - new Date(today)) / 86400000);
+    el.className = 'trip-countdown pre-trip';
+    el.textContent = `✈ ${diff} day${diff !== 1 ? 's' : ''} to go`;
+  } else if (today <= last) {
+    const dayNum = dates.filter(d => d <= today).length;
+    el.className = 'trip-countdown on-trip';
+    el.textContent = `Day ${dayNum} of ${dates.length}`;
+  } else {
+    el.className = 'trip-countdown post-trip';
+  }
+}
+
 function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
