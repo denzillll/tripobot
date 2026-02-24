@@ -11,20 +11,11 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, MenuButtonWebApp, WebAppInfo
 from telegram.ext import Application, CommandHandler, ContextTypes
-from telegram import ReplyKeyboardMarkup, KeyboardButton
 
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "")
-# To this:
-# Ensure the protocol is prepended if missing
-
-# Force https:// and strip trailing slashes
-_raw_url = os.environ.get("WEB_APP_URL", "").strip().rstrip("/")
-if _raw_url and not _raw_url.startswith("http"):
-    WEB_APP_URL = f"https://{_raw_url}"
-else:
-    WEB_APP_URL = _raw_url
+WEB_APP_URL = os.environ.get("WEB_APP_URL", "").rstrip("/")   # e.g. https://tripbot.railway.app
 DATA_FILE  = Path("data.json")
 
 
@@ -118,18 +109,15 @@ def default_data() -> dict:
 
 ptb_app = Application.builder().token(BOT_TOKEN).build()
 
-# --- Around line 125: Fix the Start Command ---
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # This is the "Coconut Split" style link
-    # Change 'planner' to whatever Short Name you chose in BotFather
-    app_link = f"https://t.me/{context.bot.username}/denzildog"
-
+    if not WEB_APP_URL:
+        await update.message.reply_text("WEB_APP_URL not configured.")
+        return
     kb = InlineKeyboardMarkup([[
-        InlineKeyboardButton(text="🏔 Open Trip Planner", url=app_link)
+        InlineKeyboardButton("🏔 Open Trip Planner", web_app=WebAppInfo(url=WEB_APP_URL))
     ]])
-
     await update.message.reply_text(
-        "Welcome! Click below to launch the app directly in this chat.",
+        "Tap below to open the trip planner.",
         reply_markup=kb
     )
 
