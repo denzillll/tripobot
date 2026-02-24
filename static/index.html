@@ -355,11 +355,11 @@
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
   }
-  .flight-endpoint { flex: 1; }
+  .flight-endpoint { flex: 1; min-width: 0; overflow: hidden; }
   .flight-endpoint:last-child { text-align: right; }
   .flight-iata {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 800;
     line-height: 1;
   }
@@ -370,6 +370,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%;
   }
   .flight-time {
     font-family: 'JetBrains Mono', monospace;
@@ -2653,11 +2654,25 @@ function sheetContent(type) {
         <div class="sheet-body">
           ${appData.accoms.length && !editing ? `
           <div class="field">
-            <label>From Accommodation (auto-fills below)</label>
+            <label>From Accommodation</label>
             <select id="f-accomsel" onchange="prefillFromAccom()">
-              <option value="">— or fill manually below —</option>
+              <option value="">— pick to auto-fill —</option>
               ${accomOpts}
             </select>
+          </div>` : ''}
+          ${(appData.flights||[]).length && !editing ? `
+          <div class="field">
+            <label>From Flight</label>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
+              <select id="f-flightsel" onchange="prefillFromFlight()">
+                <option value="">— pick a flight —</option>
+                ${(appData.flights||[]).map((f,i) => `<option value="${i}">✈️ ${f.flightNumber||'?'} · ${f.fromCode||f.from||'?'} → ${f.toCode||f.to||'?'}</option>`).join('')}
+              </select>
+              <select id="f-flightdir" style="width:90px">
+                <option value="dep">Departs</option>
+                <option value="arr">Arrives</option>
+              </select>
+            </div>
           </div>` : ''}
           <div class="field"><label>Stop Name</label><input id="f-name" value="${stop?.name || pre?.name || ''}" placeholder="Hotel check-in, Dinner, Trailhead…" autocomplete="off"></div>
           <div class="field"><label>Time</label><input id="f-time" type="time" value="${stop?.time || ''}"></div>
@@ -3014,6 +3029,30 @@ function prefillFromAccom() {
   if (mapsEl && !mapsEl.value && accom.mapsUrl) mapsEl.value = accom.mapsUrl;
   const notesEl = document.getElementById('f-notes');
   if (notesEl && !notesEl.value && accom.notes) notesEl.value = accom.notes;
+}
+
+function prefillFromFlight() {
+  const sel = document.getElementById('f-flightsel');
+  if (!sel || sel.value === '') return;
+  const flight = (appData.flights || [])[parseInt(sel.value)];
+  if (!flight) return;
+  const isDep  = (document.getElementById('f-flightdir')?.value || 'dep') === 'dep';
+  const code   = isDep ? (flight.fromCode || flight.from || '') : (flight.toCode || flight.to || '');
+  const verb   = isDep ? 'Departs' : 'Arrives';
+  const fn     = flight.flightNumber || 'Flight';
+  const nameEl = document.getElementById('f-name');
+  const timeEl = document.getElementById('f-time');
+  const noteEl = document.getElementById('f-notes');
+  if (nameEl) nameEl.value = `✈️ ${fn} — ${verb} ${code}`.trim();
+  if (timeEl) timeEl.value = isDep ? (flight.depTime || '') : (flight.arrTime || '');
+  if (noteEl && !noteEl.value) {
+    const parts = [
+      flight.airline,
+      flight.from && flight.to ? `${flight.from} → ${flight.to}` : '',
+      flight.ref ? `Ref: ${flight.ref}` : ''
+    ].filter(Boolean);
+    noteEl.value = parts.join(' · ');
+  }
 }
 
 function submitStop() {
