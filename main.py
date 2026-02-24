@@ -103,6 +103,11 @@ def default_data() -> dict:
             "snowboard": ["Board or skis", "Helmet", "Goggles", "Gloves", "Ski jacket + pants", "Thermal base layers", "Ski socks x2", "Forfait booked online"],
             "admin": ["Rental car confirmed", "All accoms booked", "Cash for rural areas", "Spain SIM / roaming on", "Fuel up before leaving Madrid"]
         },
+        "wxLocations": [
+            {"name": "Burgos",          "tag": "Thu 26 Feb", "lat": 42.3439, "lon": -3.6969, "dateFrom": "2026-02-26", "dateTo": "2026-02-26", "wind": False, "snow": False},
+            {"name": "Picos de Europa", "tag": "Fri\u2013Sat",    "lat": 43.2520, "lon": -4.8492, "dateFrom": "2026-02-27", "dateTo": "2026-02-28", "wind": True,  "snow": False},
+            {"name": "Valdesqui",       "tag": "Sun 1 Mar",  "lat": 40.8897, "lon": -3.9153, "dateFrom": "2026-03-01", "dateTo": "2026-03-01", "wind": False, "snow": True}
+        ],
         "admins": []
     }
 

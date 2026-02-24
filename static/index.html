@@ -483,7 +483,8 @@
   .field textarea { resize: none; height: 80px; }
   .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238898b8' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
   ::placeholder { color: var(--text3); }
-  input[type=color] { height: 44px; padding: 4px 8px; cursor: pointer; }
+  input[type=color]    { height: 44px; padding: 4px 8px; cursor: pointer; }
+  input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer; flex-shrink: 0; }
 
   .btn-primary {
     width: 100%;
@@ -832,26 +833,46 @@ function wmoInfo(code) {
   return                  { e: '⛈', label: 'Thunderstorm' };
 }
 
+function datesInRange(from, to) {
+  const dates = [];
+  let d = new Date(from + 'T12:00:00');
+  const end = new Date((to || from) + 'T12:00:00');
+  while (d <= end) { dates.push(d.toISOString().split('T')[0]); d.setDate(d.getDate() + 1); }
+  return dates;
+}
+
 async function loadLiveWeather() {
   const el = document.getElementById('live-weather');
   if (!el) return;
-  const locations = [
-    { name: 'Burgos',          tag: 'Thu 26 Feb', lat: 42.3439, lon: -3.6969, dates: ['2026-02-26'] },
-    { name: 'Picos de Europa', tag: 'Fri–Sat',    lat: 43.2520, lon: -4.8492, dates: ['2026-02-27','2026-02-28'], wind: true },
-    { name: 'Valdesqui',       tag: 'Sun 1 Mar',  lat: 40.8897, lon: -3.9153, dates: ['2026-03-01'], snow: true },
-  ];
+  const locations = appData.wxLocations || [];
+  if (!locations.length) {
+    el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">No locations added${isAdmin ? '. Tap <strong style="color:var(--text2)">+ Add</strong> above.' : '.'}</div>`;
+    return;
+  }
   try {
     const results = await Promise.all(locations.map(loc =>
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,weather_code,wind_speed_10m_max,snowfall_sum&timezone=Europe%2FMadrid&wind_speed_unit=kmh&forecast_days=10`)
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,weather_code,wind_speed_10m_max,snowfall_sum&timezone=Europe%2FMadrid&wind_speed_unit=kmh&forecast_days=14`)
         .then(r => r.json())
     ));
     let html = '';
     locations.forEach((loc, li) => {
       const d = results[li].daily;
-      html += `<div class="wx-card"><div class="wx-header"><span class="wx-loc-name">${loc.name}</span><span class="wx-loc-tag">${loc.tag}</span></div>`;
-      loc.dates.forEach(dateStr => {
+      const dates = datesInRange(loc.dateFrom, loc.dateTo);
+      html += `<div class="wx-card">
+        <div class="wx-header">
+          <span class="wx-loc-name">${loc.name}</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            ${loc.tag ? `<span class="wx-loc-tag">${loc.tag}</span>` : ''}
+            ${isAdmin ? `<span onclick="editWxLoc(${li})" style="color:var(--text3);font-size:14px;cursor:pointer;padding:2px 4px">✏️</span>` : ''}
+          </div>
+        </div>`;
+      dates.forEach(dateStr => {
         const idx = d.time.indexOf(dateStr);
-        if (idx === -1) return;
+        const day = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
+        if (idx === -1) {
+          html += `<div class="wx-day-row"><span class="wx-day-label">${day}</span><span style="color:var(--text3);font-size:12px">Outside forecast range</span></div>`;
+          return;
+        }
         const { e, label } = wmoInfo(d.weather_code[idx]);
         const hi    = Math.round(d.temperature_2m_max[idx]);
         const lo    = Math.round(d.temperature_2m_min[idx]);
@@ -859,7 +880,6 @@ async function loadLiveWeather() {
         const precM = d.precipitation_sum[idx];
         const wind  = Math.round(d.wind_speed_10m_max[idx]);
         const snow  = d.snowfall_sum[idx];
-        const day   = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
         let meta = `💧 ${precP}%`;
         if (precM > 0) meta += ` · ${precM.toFixed(1)}mm`;
         if (loc.wind || wind > 25) meta += ` · 💨 ${wind} km/h`;
@@ -881,7 +901,7 @@ async function loadLiveWeather() {
 
 function renderWeather() {
   let html = `
-    <div class="section-head"><span class="section-title">Live Weather</span></div>
+    <div class="section-head"><span class="section-title">Live Weather</span>${isAdmin ? `<button class="btn-add" onclick="addWxLoc()">＋ Add</button>` : ''}</div>
     <div id="live-weather"><div class="spinner" style="margin:20px auto"></div></div>
     <div class="section-head" style="margin-top:20px"><span class="section-title">Forecasts</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-weather')">＋ Add</button>` : ''}</div>
     <div class="weather-note">⚠️ Check forecasts the morning of each hike</div>`;
@@ -904,6 +924,70 @@ function deleteWeather(i) {
   if (!confirm(`Remove "${appData.weather[i].name}"?`)) return;
   appData.weather.splice(i, 1);
   saveData().then(() => renderTab('weather'));
+}
+
+// ── Live weather location CRUD ─────────────────────────────────────────────────
+let _wxLocGeo = null;
+let _wxLocEditIdx = -1;
+
+function addWxLoc() {
+  _wxLocEditIdx = -1;
+  _wxLocGeo = null;
+  openSheet('wx-loc-form');
+}
+
+function editWxLoc(i) {
+  _wxLocEditIdx = i;
+  _wxLocGeo = null;
+  openSheet('wx-loc-form');
+}
+
+function deleteWxLoc(i) {
+  if (!confirm(`Remove "${appData.wxLocations[i].name}"?`)) return;
+  appData.wxLocations.splice(i, 1);
+  saveData().then(() => { _closeSheet(); renderTab('weather'); });
+}
+
+async function searchWxPlace() {
+  const q = document.getElementById('f-wxplace')?.value.trim();
+  if (!q) return;
+  const res = document.getElementById('wx-geo-result');
+  res.textContent = 'Searching…';
+  res.style.color = 'var(--text3)';
+  try {
+    const data = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en`).then(r => r.json());
+    if (!data.results?.length) { res.textContent = 'Place not found'; res.style.color = 'var(--danger)'; _wxLocGeo = null; return; }
+    const p = data.results[0];
+    _wxLocGeo = { lat: p.latitude, lon: p.longitude };
+    res.innerHTML = `✓ ${p.name}${p.admin1 ? ', ' + p.admin1 : ''}${p.country_code ? ', ' + p.country_code : ''} <span style="color:var(--text3)">(${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)})</span>`;
+    res.style.color = 'var(--success)';
+  } catch(e) {
+    res.textContent = 'Search failed'; res.style.color = 'var(--danger)'; _wxLocGeo = null;
+  }
+}
+
+async function submitWxLoc() {
+  const name = document.getElementById('f-wxname')?.value.trim();
+  const tag  = document.getElementById('f-wxtag')?.value.trim() || '';
+  const from = document.getElementById('f-wxfrom')?.value;
+  const to   = document.getElementById('f-wxto')?.value || from;
+  const wind = document.getElementById('f-wxwind')?.checked || false;
+  const snow = document.getElementById('f-wxsnow')?.checked || false;
+  if (!name || !from) { alert('Name and start date are required'); return; }
+  let lat, lon;
+  if (_wxLocGeo) {
+    lat = _wxLocGeo.lat; lon = _wxLocGeo.lon;
+  } else if (_wxLocEditIdx >= 0 && appData.wxLocations?.[_wxLocEditIdx]) {
+    lat = appData.wxLocations[_wxLocEditIdx].lat;
+    lon = appData.wxLocations[_wxLocEditIdx].lon;
+  } else {
+    alert('Please search for a location first'); return;
+  }
+  const loc = { name, tag, lat, lon, dateFrom: from, dateTo: to, wind, snow };
+  if (!appData.wxLocations) appData.wxLocations = [];
+  if (_wxLocEditIdx >= 0) appData.wxLocations[_wxLocEditIdx] = loc;
+  else appData.wxLocations.push(loc);
+  saveData().then(() => { _closeSheet(); renderTab('weather'); });
 }
 
 // ── Links ─────────────────────────────────────────────────────────────────────
@@ -1104,6 +1188,41 @@ function sheetContent(type) {
         <div style="background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:20px;text-align:center;font-family:monospace;font-size:28px;color:var(--gold2);letter-spacing:2px;margin-bottom:16px">${userId || 'Not available'}</div>
         <button class="btn-secondary" onclick="_closeSheet()">Close</button>
       </div>`;
+
+    case 'wx-loc-form': {
+      const editing = _wxLocEditIdx >= 0;
+      const loc = editing ? appData.wxLocations[_wxLocEditIdx] : null;
+      const btnStyle = 'background:var(--gold-dim);border:1px solid #c8912a55;color:var(--gold2);border-radius:8px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;font-family:"DM Sans",sans-serif;flex-shrink:0';
+      const cbStyle  = 'display:flex;align-items:center;gap:8px;color:var(--text);font-size:14px;text-transform:none;letter-spacing:0;cursor:pointer;margin-bottom:0';
+      return `
+        <div class="sheet-title">${editing ? 'Edit' : 'Add'} Weather Location</div>
+        <div class="sheet-body">
+          <div class="field"><label>Display Name</label><input id="f-wxname" value="${loc?.name || ''}" placeholder="Burgos, Picos de Europa…" autocomplete="off"></div>
+          <div class="field">
+            <label>Search Location</label>
+            <div style="display:flex;gap:8px">
+              <input id="f-wxplace" placeholder="${loc?.name || 'Type a place name…'}" autocomplete="off" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();searchWxPlace()}">
+              <button type="button" onclick="searchWxPlace()" style="${btnStyle}">🔍 Search</button>
+            </div>
+            <div id="wx-geo-result" style="font-size:12px;margin-top:6px;color:var(--text3)">${loc ? `Current: ${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)} — search to change` : 'Search to set coordinates'}</div>
+          </div>
+          <div class="field"><label>Label (e.g. Fri–Sat)</label><input id="f-wxtag" value="${loc?.tag || ''}" placeholder="Thu, Fri–Sat…" autocomplete="off"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field"><label>From</label><input id="f-wxfrom" type="date" value="${loc?.dateFrom || ''}"></div>
+            <div class="field"><label>To (optional)</label><input id="f-wxto" type="date" value="${loc?.dateTo || ''}"></div>
+          </div>
+          <div class="field">
+            <label>Show extra info</label>
+            <div style="display:flex;gap:20px;margin-top:4px">
+              <label style="${cbStyle}"><input type="checkbox" id="f-wxwind" ${loc?.wind ? 'checked' : ''}> Wind speed</label>
+              <label style="${cbStyle}"><input type="checkbox" id="f-wxsnow" ${loc?.snow ? 'checked' : ''}> Snowfall</label>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="submitWxLoc()">${editing ? 'Save Changes' : 'Add Location'}</button>
+          ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteWxLoc(${_wxLocEditIdx})">× Delete Location</button>` : ''}
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
 
     default: return '';
   }
