@@ -78,13 +78,14 @@ def default_data() -> dict:
 ptb_app = Application.builder().token(BOT_TOKEN).build()
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    link = MINI_APP_LINK or WEB_APP_URL
-    logging.info(f"cmd_start: using link={repr(link)}")
-    if not link:
+    if not WEB_APP_URL:
         await update.message.reply_text("WEB_APP_URL not configured.")
         return
+    chat_id = update.effective_chat.id if update.effective_chat else None
+    url = f"{WEB_APP_URL}?cid={chat_id}" if chat_id else WEB_APP_URL
+    logging.info(f"cmd_start: url={repr(url)}")
     kb = InlineKeyboardMarkup([[
-        InlineKeyboardButton("🏔 Open Trip Planner", url=link)
+        InlineKeyboardButton("🏔 Open Trip Planner", web_app=WebAppInfo(url=url))
     ]])
     await update.message.reply_text(
         "Tap below to open the trip planner.",

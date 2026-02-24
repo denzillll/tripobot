@@ -769,9 +769,11 @@ if (tg) { tg.expand(); tg.ready(); }
 
 const userId = tg?.initDataUnsafe?.user?.id || null;
 
-// Each Telegram group chat gets its own isolated trip.
-// chat.id = group; user.id = DM fallback; 'default' = local dev.
+// Priority: ?cid= URL param (injected by /start command) → initDataUnsafe.chat.id
+// (menu button) → initDataUnsafe.user.id (DM) → 'default' (local dev)
+const _urlCid = new URLSearchParams(window.location.search).get('cid');
 const chatId = String(
+  _urlCid ||
   tg?.initDataUnsafe?.chat?.id ||
   tg?.initDataUnsafe?.user?.id ||
   'default'
