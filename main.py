@@ -24,8 +24,9 @@ WEB_APP_URL   = _raw_url if _raw_url.startswith("https://") else f"https://{_raw
 MINI_APP_LINK = os.environ.get("MINI_APP_LINK", "")
 
 DATA_DIR    = Path("data")
-UPLOADS_DIR = Path("static/uploads")
 DATA_DIR.mkdir(exist_ok=True)
+UPLOADS_DIR = DATA_DIR / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
 
 
 # ── Data helpers ──────────────────────────────────────────────────────────────
@@ -205,15 +206,15 @@ async def api_add_admin(request: Request):
 # File uploads — stored under static/uploads/<chat_id>_<uuid>.<ext>
 @app.post("/api/upload")
 async def api_upload(file: UploadFile, chat_id: str = "default"):
-    UPLOADS_DIR.mkdir(exist_ok=True)
     ext   = Path(file.filename or "file").suffix.lower()
     fname = f"{_safe_id(chat_id)}_{uuid.uuid4().hex[:10]}{ext}"
     dest  = UPLOADS_DIR / fname
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
-    return {"url": f"/static/uploads/{fname}", "originalName": file.filename}
+    return {"url": f"/uploads/{fname}", "originalName": file.filename}
 
-# Serve static assets (uploaded files, etc.)
+# Serve static assets and uploaded files
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
