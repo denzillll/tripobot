@@ -1,0 +1,14 @@
+# Runtime data — never commit these
+data.json
+data/
+static/uploads/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Env
+.env
