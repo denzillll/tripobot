@@ -18,13 +18,12 @@ BOT_TOKEN  = os.environ.get("BOT_TOKEN", "")
 # To this:
 # Ensure the protocol is prepended if missing
 
-RAW_URL = os.environ.get("WEB_APP_URL", "").rstrip("/")
-
-# If the URL exists but doesn't start with https://, fix it
-if RAW_URL and not RAW_URL.startswith("http"):
-    WEB_APP_URL = f"https://{RAW_URL}"
+# Force https:// and strip trailing slashes
+_raw_url = os.environ.get("WEB_APP_URL", "").strip().rstrip("/")
+if _raw_url and not _raw_url.startswith("http"):
+    WEB_APP_URL = f"https://{_raw_url}"
 else:
-    WEB_APP_URL = RAW_URL
+    WEB_APP_URL = _raw_url
 DATA_FILE  = Path("data.json")
 
 
@@ -120,23 +119,25 @@ ptb_app = Application.builder().token(BOT_TOKEN).build()
 
 # --- Around line 125: Fix the Start Command ---
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Log the URL being used to the console so we can see it in Railway logs
+    logging.info(f"Using WebApp URL: {WEB_APP_URL}")
+
     if not WEB_APP_URL:
-        await update.message.reply_text("❌ Configuration Error: WEB_APP_URL is missing.")
+        await update.message.reply_text("❌ Error: WEB_APP_URL is not set.")
         return
 
-    # Now WEB_APP_URL is guaranteed to have https://
     kb = InlineKeyboardMarkup([[
         InlineKeyboardButton(
-            "🏔 Open Trip Planner", 
+            text="🏔 Open Trip Planner", 
             web_app=WebAppInfo(url=WEB_APP_URL)
         )
     ]])
     
     await update.message.reply_text(
-        "Welcome to your Trip Planner! Tap the button below to start.",
+        "Welcome! Tap the button below to plan your trip:",
         reply_markup=kb
     )
-
+    
 async def cmd_myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     data = load_data()
