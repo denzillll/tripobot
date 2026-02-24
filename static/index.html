@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Trip Planner</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    --bg:       #080b11;
+    --surface:  #10151e;
+    --card:     #161d2b;
+    --card2:    #1c2538;
+    --border:   #222d42;
+    --border2:  #2a3650;
+    --gold:     #c8912a;
+    --gold2:    #e8b84b;
+    --gold-dim: #c8912a33;
+    --text:     #eef2f8;
+    --text2:    #8898b8;
+    --text3:    #4d5f80;
+    --danger:   #e05555;
+    --success:  #4ade80;
+    --tab-h:    64px;
+    --safe-b:   env(safe-area-inset-bottom, 0px);
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Layout ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* Mountain header background */
+  #header {
+    position: relative;
+    padding: 20px 20px 16px;
+    background: linear-gradient(180deg, #0d1520 0%, var(--bg) 100%);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  #header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse 80% 60% at 50% -10%, #c8912a18 0%, transparent 70%);
+    pointer-events: none;
+  }
+  /* SVG mountain silhouette */
+  .mountain-bg {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 40px;
+    opacity: 0.12;
+  }
+
+  .trip-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    position: relative;
+  }
+  .trip-dates {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--gold2);
+    margin-top: 3px;
+    letter-spacing: 0.5px;
+    position: relative;
+  }
+
+  /* ── Tabs ── */
+  #tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 10px 4px;
+    cursor: pointer;
+    transition: color 0.15s;
+    color: var(--text3);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+  }
+  .tab.active {
+    color: var(--gold2);
+    border-bottom-color: var(--gold);
+  }
+  .tab-icon { font-size: 18px; line-height: 1; }
+
+  /* ── Content area ── */
+  #content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 16px calc(var(--safe-b) + 16px);
+  }
+  #content::-webkit-scrollbar { display: none; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+  }
+  .card-header:active { opacity: 0.7; }
+  .card-emoji {
+    font-size: 22px;
+    width: 36px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .card-title-group { flex: 1; min-width: 0; }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-sub {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 1px;
+  }
+  .card-chevron {
+    color: var(--text3);
+    font-size: 18px;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .card.open .card-chevron { transform: rotate(90deg); }
+  .card-body {
+    display: none;
+    border-top: 1px solid var(--border);
+  }
+  .card.open .card-body { display: block; }
+
+  /* ── Stops ── */
+  .stop {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .stop:last-child { border-bottom: none; }
+  .stop::before {
+    content: '';
+    position: absolute;
+    left: 36px;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+  .stop:first-child::before { top: 50%; }
+  .stop:last-child::before { bottom: 50%; }
+  .stop-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    min-width: 44px;
+    padding-top: 1px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .stop-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border2);
+    border: 2px solid var(--gold);
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .stop-content { flex: 1; min-width: 0; }
+  .stop-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .stop-note {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  /* ── Accom cards ── */
+  .accom-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .accom-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .accom-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--gold-dim);
+    color: var(--gold2);
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid var(--gold)33;
+    letter-spacing: 0.3px;
+  }
+  .accom-notes {
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .accom-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: var(--gold2);
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .accom-link:active { opacity: 0.7; }
+
+  /* ── Link rows ── */
+  .link-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    text-decoration: none;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .link-row:active { opacity: 0.7; }
+  .link-row-icon { font-size: 18px; flex-shrink: 0; }
+  .link-row-content { flex: 1; min-width: 0; }
+  .link-row-name {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .link-row-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .link-arrow { color: var(--text3); font-size: 16px; }
+
+  /* ── Section headings ── */
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    margin-top: 4px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  /* ── Add button ── */
+  .btn-add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--gold-dim);
+    border: 1px solid var(--gold)55;
+    color: var(--gold2);
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-add:active { opacity: 0.7; }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text3);
+  }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; line-height: 1.5; }
+
+  /* ── Checklist ── */
+  .checklist-group { margin-bottom: 20px; }
+  .checklist-group-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold2);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .checklist-item:last-child { border-bottom: none; }
+  .checklist-item.done { opacity: 0.45; }
+  .check-box {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .checklist-item.done .check-box {
+    background: var(--gold);
+    border-color: var(--gold);
+  }
+  .check-tick { color: #000; font-size: 12px; font-weight: 800; display: none; }
+  .checklist-item.done .check-tick { display: block; }
+  .check-label { font-size: 14px; }
+
+  /* ── Emergency ── */
+  .emergency-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .emergency-name { font-size: 14px; font-weight: 500; }
+  .emergency-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--gold2);
+    text-decoration: none;
+  }
+  .emergency-card.primary { border-color: var(--danger)66; background: #e0555511; }
+  .emergency-card.primary .emergency-number { color: var(--danger); font-size: 20px; }
+
+  /* ── Modal / Sheet ── */
+  #sheet-overlay {
+    position: fixed; inset: 0;
+    background: #00000088;
+    z-index: 100;
+    display: none;
+    align-items: flex-end;
+  }
+  #sheet-overlay.open { display: flex; }
+  #sheet {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    padding: 0 0 calc(var(--safe-b) + 20px);
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  #sheet-overlay.open #sheet { transform: translateY(0); }
+  .sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    margin: 12px auto 0;
+  }
+  .sheet-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 16px 20px 4px;
+  }
+  .sheet-sub {
+    font-size: 13px;
+    color: var(--text2);
+    padding: 0 20px 16px;
+  }
+  .sheet-body { padding: 0 20px; }
+
+  /* ── Form elements ── */
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .field input:focus, .field textarea:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-dim);
+  }
+  .field textarea { resize: none; height: 80px; }
+  .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238898b8' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+  ::placeholder { color: var(--text3); }
+  input[type=color] { height: 44px; padding: 4px 8px; cursor: pointer; }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--gold);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+  .btn-primary:active { opacity: 0.8; }
+  .btn-secondary {
+    width: 100%;
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .btn-danger {
+    background: #e0555522;
+    color: var(--danger);
+    border-color: var(--danger)44;
+  }
+
+  /* ── Day selector ── */
+  .day-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .day-opt {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .day-opt.selected {
+    background: var(--gold-dim);
+    border-color: var(--gold);
+    color: var(--gold2);
+  }
+  .day-opt-emoji { font-size: 18px; }
+  .day-opt-label { font-size: 12px; font-weight: 600; margin-top: 4px; }
+
+  /* ── Delete swipe reveal ── */
+  .deletable {
+    position: relative;
+    overflow: hidden;
+  }
+  .delete-btn {
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    background: var(--danger);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transform: translateX(100%);
+    transition: transform 0.2s;
+    border-radius: 0 12px 12px 0;
+  }
+  .deletable.reveal .delete-btn { transform: translateX(0); }
+
+  /* ── Weather section ── */
+  .weather-note {
+    font-size: 12px;
+    color: var(--text3);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── Edit section ── */
+  .edit-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .edit-row:active { opacity: 0.7; }
+  .edit-row-label { font-size: 14px; font-weight: 500; }
+  .edit-row-value { font-size: 13px; color: var(--text2); max-width: 55%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 24px; height: 24px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin: 40px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Animations ── */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .tab-content { animation: fadeIn 0.2s ease; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <div id="header">
+    <svg class="mountain-bg" viewBox="0 0 400 40" preserveAspectRatio="none" fill="white">
+      <path d="M0 40 L40 15 L80 28 L130 5 L175 22 L220 8 L265 20 L310 2 L355 18 L400 10 L400 40 Z"/>
+    </svg>
+    <div class="trip-name" id="trip-name">Loading...</div>
+    <div class="trip-dates" id="trip-dates"></div>
+  </div>
+
+  <!-- Tab bar -->
+  <div id="tabs">
+    <div class="tab active" data-tab="itinerary" onclick="switchTab('itinerary')">
+      <span class="tab-icon">🗓</span>Plan
+    </div>
+    <div class="tab" data-tab="accoms" onclick="switchTab('accoms')">
+      <span class="tab-icon">🏨</span>Stay
+    </div>
+    <div class="tab" data-tab="weather" onclick="switchTab('weather')">
+      <span class="tab-icon">🌤</span>Weather
+    </div>
+    <div class="tab" data-tab="links" onclick="switchTab('links')">
+      <span class="tab-icon">🔗</span>Links
+    </div>
+    <div class="tab" data-tab="more" onclick="switchTab('more')">
+      <span class="tab-icon">⋯</span>More
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+    <div class="spinner" id="loading-spinner"></div>
+  </div>
+</div>
+
+<!-- Bottom Sheet -->
+<div id="sheet-overlay" onclick="closeSheet(event)">
+  <div id="sheet">
+    <div class="sheet-handle"></div>
+    <div id="sheet-inner"></div>
+  </div>
+</div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.expand(); tg.ready(); }
+
+const userId = tg?.initDataUnsafe?.user?.id || null;
+
+let appData = null;
+let isAdmin = false;
+let activeTab = 'itinerary';
+let checkedItems = JSON.parse(localStorage.getItem('checked') || '{}');
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const [dataRes, adminRes] = await Promise.all([
+      fetch('/api/data').then(r => r.json()),
+      userId ? fetch(`/api/is_admin?user_id=${userId}`).then(r => r.json()) : Promise.resolve({is_admin: false})
+    ]);
+    appData = dataRes;
+    isAdmin = adminRes.is_admin;
+    document.getElementById('trip-name').textContent = appData.trip.name;
+    document.getElementById('trip-dates').textContent = appData.trip.dates;
+    document.getElementById('loading-spinner').remove();
+    renderTab('itinerary');
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load trip data.<br>Pull to refresh.</div></div>`;
+  }
+}
+
+async function saveData() {
+  await fetch('/api/data', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(appData)
+  });
+}
+
+// ── Tab navigation ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  renderTab(tab);
+}
+
+function renderTab(tab) {
+  const el = document.getElementById('content');
+  el.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'tab-content';
+  switch(tab) {
+    case 'itinerary': div.innerHTML = renderItinerary(); break;
+    case 'accoms':    div.innerHTML = renderAccoms(); break;
+    case 'weather':   div.innerHTML = renderWeather(); break;
+    case 'links':     div.innerHTML = renderLinks(); break;
+    case 'more':      div.innerHTML = renderMore(); break;
+  }
+  el.appendChild(div);
+}
+
+// ── Itinerary ─────────────────────────────────────────────────────────────────
+function renderItinerary() {
+  let html = `<div class="section-head"><span class="section-title">Itinerary</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-stop')">＋ Add stop</button>` : ''}</div>`;
+  appData.days.forEach((day, di) => {
+    const stopCount = day.stops.length;
+    html += `
+    <div class="card" id="day-${day.id}">
+      <div class="card-header" onclick="toggleCard('day-${day.id}')">
+        <div class="card-emoji">${day.emoji}</div>
+        <div class="card-title-group">
+          <div class="card-title">${day.label}</div>
+          <div class="card-sub">${day.title} · ${stopCount} stop${stopCount!==1?'s':''}</div>
+        </div>
+        <div class="card-chevron">›</div>
+      </div>
+      <div class="card-body">`;
+    day.stops.forEach((stop, si) => {
+      html += `
+        <div class="stop">
+          <div class="stop-time">${stop.time}</div>
+          <div class="stop-dot"></div>
+          <div class="stop-content">
+            <div class="stop-name">${stop.name}</div>
+            ${stop.note ? `<div class="stop-note">${stop.note}</div>` : ''}
+          </div>
+          ${isAdmin ? `<div onclick="deleteStop(${di},${si})" style="color:var(--text3);font-size:18px;padding:0 4px;cursor:pointer;flex-shrink:0">×</div>` : ''}
+        </div>`;
+    });
+    html += `</div></div>`;
+  });
+  return html;
+}
+
+function toggleCard(id) {
+  document.getElementById(id)?.classList.toggle('open');
+}
+
+function deleteStop(di, si) {
+  if (!confirm(`Remove "${appData.days[di].stops[si].name}"?`)) return;
+  appData.days[di].stops.splice(si, 1);
+  saveData().then(() => renderTab('itinerary'));
+}
+
+// ── Accommodations ────────────────────────────────────────────────────────────
+function renderAccoms() {
+  let html = `<div class="section-head"><span class="section-title">Accommodation</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-accom')">＋ Add</button>` : ''}</div>`;
+  if (!appData.accoms.length) {
+    html += `<div class="empty"><div class="empty-icon">🏨</div><div class="empty-text">No bookings yet.<br>${isAdmin ? 'Tap <strong>+ Add</strong> to add your first booking.' : 'Admin will add bookings here.'}</div></div>`;
+    return html;
+  }
+  appData.accoms.forEach((a, i) => {
+    html += `
+    <div class="accom-card">
+      <div class="accom-name">${a.name}</div>
+      <div class="accom-meta">
+        ${a.day ? `<span class="badge">📅 ${a.day}</span>` : ''}
+        ${a.notes ? `<span class="badge">📝 ${a.notes}</span>` : ''}
+      </div>
+      <a class="accom-link" href="${a.url}" target="_blank">🔗 Open booking ↗</a>
+      ${isAdmin ? `<div onclick="deleteAccom(${i})" style="color:var(--danger);font-size:12px;font-weight:600;cursor:pointer;margin-top:4px;padding:2px 0">× Remove</div>` : ''}
+    </div>`;
+  });
+  return html;
+}
+
+function deleteAccom(i) {
+  if (!confirm(`Remove "${appData.accoms[i].name}"?`)) return;
+  appData.accoms.splice(i, 1);
+  saveData().then(() => renderTab('accoms'));
+}
+
+// ── Weather ───────────────────────────────────────────────────────────────────
+function renderWeather() {
+  let html = `
+    <div class="section-head"><span class="section-title">Forecasts</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-weather')">＋ Add</button>` : ''}</div>
+    <div class="weather-note">⚠️ Check forecasts the morning of each hike</div>`;
+  appData.weather.forEach((w, i) => {
+    html += `
+    <a class="link-row" href="${w.url}" target="_blank">
+      <span class="link-row-icon">🌤</span>
+      <div class="link-row-content">
+        <div class="link-row-name">${w.name}</div>
+        ${w.day ? `<div class="link-row-sub">${w.day}</div>` : ''}
+      </div>
+      ${isAdmin ? `<div onclick="event.preventDefault();deleteWeather(${i})" style="color:var(--danger);font-size:18px;padding:0 4px">×</div>` : `<span class="link-arrow">↗</span>`}
+    </a>`;
+  });
+  return html;
+}
+
+function deleteWeather(i) {
+  if (!confirm(`Remove "${appData.weather[i].name}"?`)) return;
+  appData.weather.splice(i, 1);
+  saveData().then(() => renderTab('weather'));
+}
+
+// ── Links ─────────────────────────────────────────────────────────────────────
+function renderLinks() {
+  const cats = {trail: {label: 'Trail Status', icon: '🥾'}, booking: {label: 'Bookings', icon: '🎫'}, other: {label: 'Other', icon: '📌'}};
+  let html = `<div class="section-head"><span class="section-title">Key Links</span>${isAdmin ? `<button class="btn-add" onclick="openSheet('add-link')">＋ Add</button>` : ''}</div>`;
+  
+  Object.entries(cats).forEach(([cat, {label, icon}]) => {
+    const items = appData.links.filter(l => l.cat === cat);
+    if (!items.length) return;
+    html += `<div class="checklist-group-title" style="margin:16px 0 8px">${icon} ${label}</div>`;
+    items.forEach((l, i) => {
+      const idx = appData.links.indexOf(l);
+      html += `
+      <a class="link-row" href="${l.url}" target="_blank">
+        <div class="link-row-content"><div class="link-row-name">${l.name}</div></div>
+        ${isAdmin ? `<div onclick="event.preventDefault();deleteLink(${idx})" style="color:var(--danger);font-size:18px;padding:0 4px">×</div>` : `<span class="link-arrow">↗</span>`}
+      </a>`;
+    });
+  });
+  return html;
+}
+
+function deleteLink(i) {
+  if (!confirm(`Remove "${appData.links[i].name}"?`)) return;
+  appData.links.splice(i, 1);
+  saveData().then(() => renderTab('links'));
+}
+
+// ── More ──────────────────────────────────────────────────────────────────────
+function renderMore() {
+  // Checklist
+  const cats = {
+    hiking: {label: 'Hiking Gear', icon: '🥾'},
+    snowboard: {label: 'Snowboard Gear', icon: '⛷️'},
+    admin: {label: 'Trip Admin', icon: '🚗'}
+  };
+  let checklistHtml = '';
+  Object.entries(cats).forEach(([cat, {label, icon}]) => {
+    const items = appData.checklist[cat] || [];
+    checklistHtml += `<div class="checklist-group">
+      <div class="checklist-group-title">${icon} ${label}</div>`;
+    items.forEach((item, i) => {
+      const key = `${cat}-${i}`;
+      const done = !!checkedItems[key];
+      checklistHtml += `
+        <div class="checklist-item ${done ? 'done' : ''}" onclick="toggleCheck('${key}', this)">
+          <div class="check-box"><span class="check-tick">✓</span></div>
+          <span class="check-label">${item}</span>
+        </div>`;
+    });
+    checklistHtml += `</div>`;
+  });
+
+  // Emergency
+  let emergencyHtml = '';
+  appData.emergency.forEach((e, i) => {
+    const primary = e.number === '112';
+    emergencyHtml += `
+      <div class="emergency-card ${primary ? 'primary' : ''}">
+        <div class="emergency-name">${e.name}</div>
+        <a class="emergency-number" href="tel:${e.number.replace(/\s/g,'')}">${e.number}</a>
+      </div>`;
+  });
+
+  let editSection = isAdmin ? `
+    <div class="section-head" style="margin-top:24px"><span class="section-title">Trip Settings</span></div>
+    <div class="edit-row" onclick="openSheet('edit-trip')">
+      <div class="edit-row-label">✏️ Edit trip name & dates</div>
+      <div class="edit-row-value">${appData.trip.name}</div>
+    </div>
+    <div class="edit-row" onclick="openSheet('show-id')">
+      <div class="edit-row-label">👤 My user ID</div>
+      <div class="edit-row-value" style="font-family:monospace">${userId || 'Unknown'}</div>
+    </div>
+  ` : `
+    <div style="padding:16px 0;text-align:center;color:var(--text3);font-size:13px">
+      To edit trip info, ask the admin to add you via /addadmin
+    </div>
+  `;
+
+  return `
+    <div class="section-head"><span class="section-title">Packing Checklist</span></div>
+    ${checklistHtml}
+    <div class="section-head" style="margin-top:8px"><span class="section-title">Emergency Numbers</span></div>
+    ${emergencyHtml}
+    ${editSection}
+  `;
+}
+
+function toggleCheck(key, el) {
+  const done = !el.classList.contains('done');
+  el.classList.toggle('done', done);
+  checkedItems[key] = done;
+  if (!done) delete checkedItems[key];
+  localStorage.setItem('checked', JSON.stringify(checkedItems));
+}
+
+// ── Bottom Sheet ──────────────────────────────────────────────────────────────
+function openSheet(type) {
+  const overlay = document.getElementById('sheet-overlay');
+  const inner = document.getElementById('sheet-inner');
+  inner.innerHTML = sheetContent(type);
+  overlay.classList.add('open');
+  // Trigger animation after paint
+  requestAnimationFrame(() => {
+    const sheet = document.getElementById('sheet');
+    sheet.style.transform = 'translateY(0)';
+  });
+}
+
+function closeSheet(e) {
+  if (e && e.target !== document.getElementById('sheet-overlay')) return;
+  _closeSheet();
+}
+
+function _closeSheet() {
+  const overlay = document.getElementById('sheet-overlay');
+  overlay.classList.remove('open');
+}
+
+function sheetContent(type) {
+  switch(type) {
+    case 'add-accom': return `
+      <div class="sheet-title">Add Accommodation</div>
+      <div class="sheet-sub">Add a booking for the trip</div>
+      <div class="sheet-body">
+        <div class="field"><label>Name</label><input id="f-name" placeholder="Airbnb Arenas, Hotel Rural..." autocomplete="off"></div>
+        <div class="field"><label>Booking URL</label><input id="f-url" type="url" placeholder="https://airbnb.com/rooms/..."></div>
+        <div class="field"><label>Nights</label><input id="f-day" placeholder="Fri-Sat, All nights..." autocomplete="off"></div>
+        <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Checkout 11am, Free parking, Contact..."></textarea></div>
+        <button class="btn-primary" onclick="submitAccom()">Save Booking</button>
+        <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+      </div>`;
+
+    case 'add-weather': return `
+      <div class="sheet-title">Add Forecast Link</div>
+      <div class="sheet-sub">Add a weather source</div>
+      <div class="sheet-body">
+        <div class="field"><label>Name</label><input id="f-name" placeholder="Potes hourly, Covadonga..." autocomplete="off"></div>
+        <div class="field"><label>URL</label><input id="f-url" type="url" placeholder="https://accuweather.com/..."></div>
+        <div class="field"><label>Day (optional)</label><input id="f-day" placeholder="Fri-Sat, Sunday..." autocomplete="off"></div>
+        <button class="btn-primary" onclick="submitWeather()">Save Link</button>
+        <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+      </div>`;
+
+    case 'add-link': return `
+      <div class="sheet-title">Add Key Link</div>
+      <div class="sheet-body">
+        <div class="field"><label>Name</label><input id="f-name" placeholder="Park webcam, Avalanche bulletin..." autocomplete="off"></div>
+        <div class="field"><label>URL</label><input id="f-url" type="url" placeholder="https://..."></div>
+        <div class="field"><label>Category</label>
+          <select id="f-cat">
+            <option value="trail">🥾 Trail Status</option>
+            <option value="booking">🎫 Booking</option>
+            <option value="other">📌 Other</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="submitLink()">Save Link</button>
+        <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+      </div>`;
+
+    case 'add-stop': {
+      const dayOpts = appData.days.map((d, i) => `
+        <div class="day-opt" data-day="${d.id}" onclick="selectDay(this)">
+          <div class="day-opt-emoji">${d.emoji}</div>
+          <div class="day-opt-label">${d.label}</div>
+        </div>`).join('');
+      return `
+        <div class="sheet-title">Add Itinerary Stop</div>
+        <div class="sheet-body">
+          <div class="field"><label>Day</label><div class="day-selector" id="day-selector">${dayOpts}</div></div>
+          <div class="field"><label>Time</label><input id="f-time" placeholder="19:30, ~21:00..." autocomplete="off"></div>
+          <div class="field"><label>Stop name</label><input id="f-name" placeholder="Dinner at La Sidreria..." autocomplete="off"></div>
+          <div class="field"><label>Notes (optional)</label><textarea id="f-notes" placeholder="Reserve in advance, try the cider..."></textarea></div>
+          <button class="btn-primary" onclick="submitStop()">Add Stop</button>
+          <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+        </div>`;
+    }
+
+    case 'edit-trip': return `
+      <div class="sheet-title">Edit Trip Info</div>
+      <div class="sheet-body">
+        <div class="field"><label>Trip Name</label><input id="f-name" value="${appData.trip.name}" autocomplete="off"></div>
+        <div class="field"><label>Dates</label><input id="f-dates" value="${appData.trip.dates}" autocomplete="off"></div>
+        <button class="btn-primary" onclick="submitEditTrip()">Save Changes</button>
+        <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
+      </div>`;
+
+    case 'show-id': return `
+      <div class="sheet-title">Your Telegram ID</div>
+      <div class="sheet-sub">Share this with the trip admin to get edit access</div>
+      <div class="sheet-body">
+        <div style="background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:20px;text-align:center;font-family:monospace;font-size:28px;color:var(--gold2);letter-spacing:2px;margin-bottom:16px">${userId || 'Not available'}</div>
+        <button class="btn-secondary" onclick="_closeSheet()">Close</button>
+      </div>`;
+
+    default: return '';
+  }
+}
+
+// ── Day selector in sheet ─────────────────────────────────────────────────────
+function selectDay(el) {
+  document.querySelectorAll('.day-opt').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ── Submit handlers ───────────────────────────────────────────────────────────
+function submitAccom() {
+  const name = document.getElementById('f-name')?.value.trim();
+  const url  = document.getElementById('f-url')?.value.trim();
+  if (!name || !url) { alert('Name and URL are required'); return; }
+  appData.accoms.push({
+    name, url,
+    day:   document.getElementById('f-day')?.value.trim() || '',
+    notes: document.getElementById('f-notes')?.value.trim() || ''
+  });
+  saveData().then(() => { _closeSheet(); renderTab('accoms'); });
+}
+
+function submitWeather() {
+  const name = document.getElementById('f-name')?.value.trim();
+  const url  = document.getElementById('f-url')?.value.trim();
+  if (!name || !url) { alert('Name and URL are required'); return; }
+  appData.weather.push({ name, url, day: document.getElementById('f-day')?.value.trim() || '' });
+  saveData().then(() => { _closeSheet(); renderTab('weather'); });
+}
+
+function submitLink() {
+  const name = document.getElementById('f-name')?.value.trim();
+  const url  = document.getElementById('f-url')?.value.trim();
+  if (!name || !url) { alert('Name and URL are required'); return; }
+  appData.links.push({ name, url, cat: document.getElementById('f-cat')?.value || 'other' });
+  saveData().then(() => { _closeSheet(); renderTab('links'); });
+}
+
+function submitStop() {
+  const selDay = document.querySelector('.day-opt.selected')?.dataset.day;
+  const time   = document.getElementById('f-time')?.value.trim();
+  const name   = document.getElementById('f-name')?.value.trim();
+  if (!selDay || !time || !name) { alert('Day, time and name are required'); return; }
+  const day = appData.days.find(d => d.id === selDay);
+  if (!day) return;
+  day.stops.push({ time, name, note: document.getElementById('f-notes')?.value.trim() || '' });
+  saveData().then(() => { _closeSheet(); renderTab('itinerary'); });
+}
+
+function submitEditTrip() {
+  const name  = document.getElementById('f-name')?.value.trim();
+  const dates = document.getElementById('f-dates')?.value.trim();
+  if (!name || !dates) { alert('Name and dates are required'); return; }
+  appData.trip.name  = name;
+  appData.trip.dates = dates;
+  saveData().then(() => {
+    document.getElementById('trip-name').textContent = name;
+    document.getElementById('trip-dates').textContent = dates;
+    _closeSheet();
+    renderTab('more');
+  });
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
