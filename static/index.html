@@ -308,20 +308,6 @@
   }
   .link-row-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
   .link-arrow { color: var(--text3); font-size: 16px; }
-  .type-btn {
-    background: var(--card);
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    padding: 10px;
-    text-align: center;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--text2);
-    transition: all 0.15s;
-    user-select: none;
-  }
-  .type-btn.selected { background: var(--gold-dim); border-color: var(--gold); color: var(--gold2); font-weight: 600; }
-  input[type=file] { appearance: auto; -webkit-appearance: auto; padding: 10px 14px; cursor: pointer; }
 
   /* ── Section headings ── */
   .section-head {
@@ -676,6 +662,61 @@
   }
   .add-stop-row:active { color: var(--gold2); }
 
+  /* ── Refs / Info tab ── */
+  .type-btn {
+    flex: 1;
+    padding: 10px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    background: var(--card);
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .type-btn.selected {
+    background: var(--gold-dim);
+    border-color: var(--gold);
+    color: var(--gold2);
+  }
+  input[type=file] {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text2);
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .note-content {
+    font-size: 13px;
+    color: var(--text2);
+    white-space: pre-wrap;
+    line-height: 1.6;
+    padding: 10px 12px;
+    background: var(--card2);
+    border-radius: 8px;
+  }
+  .ref-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .ref-item-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .ref-item-icon { font-size: 18px; flex-shrink: 0; }
+  .ref-item-name { flex: 1; font-size: 14px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 </style>
 </head>
 <body>
@@ -701,7 +742,7 @@
       <span class="tab-icon">🌤</span>Weather
     </div>
     <div class="tab" data-tab="refs" onclick="switchTab('refs')">
-      <span class="tab-icon">📎</span>Refs
+      <span class="tab-icon">📋</span>Info
     </div>
     <div class="tab" data-tab="more" onclick="switchTab('more')">
       <span class="tab-icon">⋯</span>More
@@ -762,19 +803,25 @@ async function init() {
     }
     if (!appData.groupChecklist) appData.groupChecklist = [];
     if (!appData.groupProgress)  appData.groupProgress  = {};
-    // Migrate old links → refs with custom categories
-    if (appData.links && !appData.refs) {
-      appData.refCats = [
-        {id:'trail',   label:'Trail Status', icon:'🥾'},
-        {id:'booking', label:'Bookings',     icon:'🎫'},
-        {id:'other',   label:'Other',        icon:'📌'}
-      ];
-      appData.refs = (appData.links || []).map(l => ({...l, type:'link'}));
+    // Migrate old links → refs
+    if (!appData.refs) appData.refs = [];
+    if (!appData.refCats) appData.refCats = [];
+    if (appData.links) {
+      (appData.links || []).forEach(l => {
+        appData.refs.push({ id: 'r' + Date.now() + Math.random().toString(36).slice(2,6), type: 'link', cat: 'uncategorized', name: l.name, url: l.url });
+      });
       delete appData.links;
       saveData();
     }
-    if (!appData.refs)    appData.refs    = [];
-    if (!appData.refCats) appData.refCats = [];
+    // Migrate old emergency → note
+    if (appData.emergency) {
+      if (appData.emergency.length) {
+        const emContent = appData.emergency.map(e => `${e.name}: ${e.number}`).join('\n');
+        appData.refs.push({ id: 'em' + Date.now(), type: 'note', cat: 'uncategorized', name: 'Emergency Numbers', content: emContent });
+      }
+      delete appData.emergency;
+      saveData();
+    }
     isAdmin = adminRes.is_admin;
     document.getElementById('trip-name').textContent = appData.trip.name;
     document.getElementById('trip-dates').textContent = appData.trip.dates;
@@ -1120,126 +1167,144 @@ async function submitWxLoc() {
   saveData().then(() => { _closeSheet(); renderTab('weather'); });
 }
 
-// ── Refs ──────────────────────────────────────────────────────────────────────
+// ── Refs (Info tab) ───────────────────────────────────────────────────────────
 function renderRefs() {
+  const refs = appData.refs || [];
   const cats = appData.refCats || [];
-  const refs  = appData.refs   || [];
   let html = `<div class="section-head">
-    <span class="section-title">References</span>
-    ${isAdmin ? `<div style="display:flex;gap:6px">
-      <button class="btn-add" onclick="addRefCat()">＋ Cat</button>
-      <button class="btn-add" onclick="addRef()">＋ Add</button>
-    </div>` : ''}
+    <span class="section-title">Info</span>
+    <div style="display:flex;gap:6px">
+      ${isAdmin ? `<button class="btn-add" onclick="addRefCat()">＋ Category</button>` : ''}
+      ${isAdmin ? `<button class="btn-add" onclick="addRef()">＋ Add</button>` : ''}
+    </div>
   </div>`;
-
-  // group by cat id
-  const grouped = {};
-  refs.forEach((r, i) => { const k = r.cat || ''; (grouped[k] = grouped[k] || []).push({r, i}); });
-
+  if (!refs.length && !cats.length) {
+    html += `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nothing here yet.<br>${isAdmin ? 'Tap <strong>+ Add</strong> to add a link, file, or note.' : 'Admin will add info here.'}</div></div>`;
+    return html;
+  }
+  // Group items by category
+  const bycat = {};
+  refs.forEach(r => {
+    const k = r.cat || 'uncategorized';
+    if (!bycat[k]) bycat[k] = [];
+    bycat[k].push(r);
+  });
+  // Render each named category
   cats.forEach((cat, ci) => {
-    const items = grouped[cat.id] || [];
-    html += `<div class="checklist-group-title" style="margin:16px 0 8px">
-      <span>${cat.icon} ${cat.label}</span>
-      ${isAdmin ? `<span onclick="editRefCat(${ci})" style="color:var(--text3);cursor:pointer;font-size:13px">✏️</span>` : ''}
+    const items = bycat[cat.id] || [];
+    html += `<div class="section-head" style="margin-top:8px">
+      <span class="section-title">${cat.icon} ${cat.label}</span>
+      ${isAdmin ? `<span onclick="editRefCat(${ci})" style="color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px">✏️</span>` : ''}
     </div>`;
     if (!items.length) {
-      html += `<div style="padding:8px 0;color:var(--text3);font-size:13px">${isAdmin ? 'No items — tap ＋ Add' : 'No items'}</div>`;
+      html += `<div style="padding:6px 0 12px;color:var(--text3);font-size:13px">${isAdmin ? 'No items yet — tap ＋ Add above' : 'No items yet'}</div>`;
     }
-    items.forEach(({r, i}) => { html += _refRow(r, i); });
+    items.forEach(r => { html += _refRow(r); });
   });
-
-  // uncategorized / unknown cat
-  const knownIds = new Set(cats.map(c => c.id));
-  const uncat = refs.map((r, i) => ({r, i})).filter(({r}) => !knownIds.has(r.cat || ''));
+  // Uncategorized
+  const uncat = bycat['uncategorized'] || [];
   if (uncat.length) {
-    html += `<div class="checklist-group-title" style="margin:16px 0 8px"><span>📌 Other</span></div>`;
-    uncat.forEach(({r, i}) => { html += _refRow(r, i); });
-  }
-
-  if (!refs.length && !cats.length) {
-    html += `<div class="empty"><div class="empty-icon">📎</div><div class="empty-text">No references yet.${isAdmin ? '<br>Tap <strong>＋ Add</strong> to get started.' : ''}</div></div>`;
+    if (cats.length) html += `<div class="section-head" style="margin-top:8px"><span class="section-title">Other</span></div>`;
+    uncat.forEach(r => { html += _refRow(r); });
   }
   return html;
 }
 
-function _refRow(r, i) {
-  const isFile = r.type === 'file';
+function _refRow(r) {
+  const typeIcon = r.type === 'link' ? '🔗' : r.type === 'file' ? '📎' : '📝';
+  const idx = (appData.refs || []).indexOf(r);
+  let actionHtml = '';
+  if (r.type === 'link') {
+    actionHtml = `<a href="${r.url}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold2);font-size:16px;text-decoration:none;padding:2px 6px;flex-shrink:0">↗</a>`;
+  } else if (r.type === 'file') {
+    actionHtml = `<a href="${r.fileUrl}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold2);font-size:16px;text-decoration:none;padding:2px 6px;flex-shrink:0">↗</a>`;
+  }
   return `
-    <a class="link-row" href="${r.url}" target="_blank">
-      <span class="link-row-icon">${isFile ? '📄' : '🔗'}</span>
-      <div class="link-row-content">
-        <div class="link-row-name">${r.name}</div>
-        ${r.notes ? `<div class="link-row-sub">${r.notes}</div>` : ''}
+    <div class="ref-item">
+      <div class="ref-item-header">
+        <div class="ref-item-icon">${typeIcon}</div>
+        <div class="ref-item-name">${r.name}</div>
+        ${isAdmin ? `<div onclick="editRef(${idx})" style="color:var(--text3);font-size:15px;cursor:pointer;padding:2px 4px;flex-shrink:0">✏️</div>` : ''}
+        ${actionHtml}
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        ${isAdmin ? `<span onclick="event.preventDefault();editRef(${i})" style="color:var(--text3);font-size:14px">✏️</span>` : ''}
-        <span class="link-arrow">${isFile ? '↓' : '↗'}</span>
-      </div>
-    </a>`;
+      ${r.type === 'note' && r.content ? `<div style="padding:0 14px 12px"><div class="note-content">${r.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div></div>` : ''}
+      ${r.type === 'file' && r.fileName ? `<div style="padding:0 14px 10px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${r.fileName}</div>` : ''}
+    </div>`;
 }
 
 let _editRefIdx    = -1;
 let _editRefCatIdx = -1;
+let _refType       = 'link';
 
-function addRef()   { _editRefIdx = -1; openSheet('ref-form'); }
-function editRef(i) { _editRefIdx = i;  openSheet('ref-form'); }
+function addRef()     { _editRefIdx = -1; _refType = 'link'; openSheet('ref-form'); }
+function editRef(i)   { _editRefIdx = i;  _refType = (appData.refs||[])[i]?.type || 'link'; openSheet('ref-form'); }
 function deleteRef(i) {
-  if (!confirm(`Remove "${appData.refs[i]?.name}"?`)) return;
+  if (!confirm(`Remove "${(appData.refs||[])[i]?.name}"?`)) return;
   appData.refs.splice(i, 1);
   saveData().then(() => { _closeSheet(); renderTab('refs'); });
 }
+function setRefType(type) {
+  _refType = type;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('selected', b.dataset.type === type));
+  document.getElementById('ref-link-fields').style.display = type === 'link' ? '' : 'none';
+  document.getElementById('ref-file-fields').style.display = type === 'file' ? '' : 'none';
+  document.getElementById('ref-note-fields').style.display = type === 'note' ? '' : 'none';
+}
 async function submitRef() {
-  const name  = document.getElementById('f-ref-name')?.value.trim();
-  const notes = document.getElementById('f-ref-notes')?.value.trim() || '';
-  const cat   = document.getElementById('f-ref-cat')?.value || '';
-  const type  = document.getElementById('f-ref-type')?.value || 'link';
-  if (!name) { alert('Name required'); return; }
-  let url = '';
-  if (type === 'link') {
-    url = document.getElementById('f-ref-url')?.value.trim() || '';
-    if (!url) { alert('URL required'); return; }
+  const name  = document.getElementById('f-refname')?.value.trim();
+  const catId = document.getElementById('f-refcat')?.value || 'uncategorized';
+  if (!name) { alert('Name is required'); return; }
+  const editing = _editRefIdx >= 0;
+  const old = editing ? appData.refs[_editRefIdx] : null;
+  let ref = { id: old?.id || ('r' + Date.now()), type: _refType, cat: catId, name };
+  if (_refType === 'link') {
+    let url = document.getElementById('f-refurl')?.value.trim() || '';
+    if (!url) { alert('URL is required'); return; }
     if (!url.match(/^https?:\/\//i)) url = 'https://' + url;
-  } else {
-    const fileInput = document.getElementById('f-ref-file');
-    if (fileInput?.files?.length) {
-      const btn = document.querySelector('[onclick="submitRef()"]');
-      if (btn) { btn.textContent = 'Uploading…'; btn.disabled = true; }
+    ref.url = url;
+  } else if (_refType === 'file') {
+    const file = document.getElementById('f-reffile')?.files?.[0];
+    if (!editing && !file) { alert('Please select a file'); return; }
+    if (file) {
       const fd = new FormData();
-      fd.append('file', fileInput.files[0]);
-      const res  = await fetch(`/api/upload?chat_id=${encodeURIComponent(chatId)}`, { method: 'POST', body: fd });
-      const data = await res.json();
-      url = data.url;
-    } else if (_editRefIdx >= 0) {
-      url = appData.refs[_editRefIdx]?.url || '';  // keep existing
+      fd.append('file', file);
+      try {
+        const res = await fetch(`/api/upload?chat_id=${encodeURIComponent(chatId)}`, { method: 'POST', body: fd }).then(r => r.json());
+        ref.fileUrl  = res.url;
+        ref.fileName = res.originalName || file.name;
+      } catch(e) { alert('File upload failed'); return; }
+    } else {
+      ref.fileUrl  = old.fileUrl;
+      ref.fileName = old.fileName;
     }
-    if (!url) { alert('Please select a file'); return; }
+  } else if (_refType === 'note') {
+    ref.content = document.getElementById('f-refcontent')?.value || '';
   }
-  const ref = { name, url, cat, type, notes };
-  if (_editRefIdx >= 0) appData.refs[_editRefIdx] = ref;
-  else appData.refs.push(ref);
+  if (!appData.refs) appData.refs = [];
+  if (editing) { appData.refs[_editRefIdx] = ref; }
+  else { appData.refs.push(ref); }
   saveData().then(() => { _closeSheet(); renderTab('refs'); });
 }
-function setRefType(type) {
-  document.getElementById('f-ref-type').value = type;
-  document.getElementById('f-ref-url-wrap').style.display  = type === 'link' ? '' : 'none';
-  document.getElementById('f-ref-file-wrap').style.display = type === 'file' ? '' : 'none';
-  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('selected', b.dataset.type === type));
-}
+
 function addRefCat()    { _editRefCatIdx = -1; openSheet('ref-cat-form'); }
 function editRefCat(ci) { _editRefCatIdx = ci; openSheet('ref-cat-form'); }
 function deleteRefCat(ci) {
-  if (!confirm(`Delete "${appData.refCats[ci]?.label}"? Items move to Other.`)) return;
-  appData.refCats.splice(ci, 1);
+  const cats = appData.refCats || [];
+  if (!confirm(`Delete "${cats[ci]?.label}"? Items in this category will become uncategorized.`)) return;
+  const catId = cats[ci].id;
+  cats.splice(ci, 1);
+  (appData.refs || []).forEach(r => { if (r.cat === catId) r.cat = 'uncategorized'; });
   saveData().then(() => { _closeSheet(); renderTab('refs'); });
 }
 function submitRefCat() {
-  const icon  = document.getElementById('f-cat-icon')?.value.trim() || '📁';
+  const icon  = document.getElementById('f-cat-icon')?.value.trim() || '📌';
   const label = document.getElementById('f-cat-label')?.value.trim();
   if (!label) { alert('Category name required'); return; }
+  if (!appData.refCats) appData.refCats = [];
   if (_editRefCatIdx >= 0) {
     appData.refCats[_editRefCatIdx] = { ...appData.refCats[_editRefCatIdx], icon, label };
   } else {
-    appData.refCats.push({ id: 'rc' + Date.now(), label, icon });
+    appData.refCats.push({ id: 'rc' + Date.now(), icon, label });
   }
   saveData().then(() => { _closeSheet(); renderTab('refs'); });
 }
@@ -1314,17 +1379,6 @@ function renderMore() {
     personalHtml = `<div style="padding:12px 0 4px;color:var(--text3);font-size:13px;text-align:center">No personal list yet — tap ＋ Category</div>`;
   }
 
-  // ── Emergency ──
-  let emergencyHtml = '';
-  appData.emergency.forEach(e => {
-    const primary = e.number === '112';
-    emergencyHtml += `
-      <div class="emergency-card ${primary ? 'primary' : ''}">
-        <div class="emergency-name">${e.name}</div>
-        <a class="emergency-number" href="tel:${e.number.replace(/\s/g,'')}">${e.number}</a>
-      </div>`;
-  });
-
   let editSection = isAdmin ? `
     <div class="section-head" style="margin-top:24px"><span class="section-title">Trip Settings</span></div>
     <div class="edit-row" onclick="openSheet('edit-trip')">
@@ -1352,8 +1406,6 @@ function renderMore() {
       <button class="btn-add" onclick="addPersonalCat()">＋ Category</button>
     </div>
     ${personalHtml}
-    <div class="section-head" style="margin-top:8px"><span class="section-title">Emergency Numbers</span></div>
-    ${emergencyHtml}
     ${editSection}
   `;
 }
@@ -1527,58 +1579,54 @@ function sheetContent(type) {
 
     case 'ref-form': {
       const editing = _editRefIdx >= 0;
-      const r = editing ? appData.refs[_editRefIdx] : null;
-      const isFile = r?.type === 'file';
-      const catOpts = (appData.refCats || []).map(c =>
-        `<option value="${c.id}" ${r?.cat === c.id ? 'selected' : ''}>${c.icon} ${c.label}</option>`
-      ).join('');
+      const r = editing ? (appData.refs||[])[_editRefIdx] : null;
+      const type = r?.type || _refType;
+      const cats = appData.refCats || [];
+      const catOpts = cats.map(c => `<option value="${c.id}" ${r?.cat === c.id ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('');
       return `
-        <div class="sheet-title">${editing ? 'Edit Reference' : 'Add Reference'}</div>
+        <div class="sheet-title">${editing ? 'Edit Item' : 'Add Item'}</div>
         <div class="sheet-body">
-          <div class="field"><label>Name</label><input id="f-ref-name" value="${r?.name || ''}" placeholder="Booking confirmation, Trail map…" autocomplete="off"></div>
           <div class="field">
             <label>Type</label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px">
-              <div class="type-btn ${!isFile ? 'selected' : ''}" data-type="link" onclick="setRefType('link')">🔗 Link</div>
-              <div class="type-btn ${isFile  ? 'selected' : ''}" data-type="file" onclick="setRefType('file')">📄 File</div>
+            <div style="display:flex;gap:8px;margin-top:2px">
+              <button class="type-btn ${type==='link'?'selected':''}" data-type="link" onclick="setRefType('link')">🔗 Link</button>
+              <button class="type-btn ${type==='file'?'selected':''}" data-type="file" onclick="setRefType('file')">📎 File</button>
+              <button class="type-btn ${type==='note'?'selected':''}" data-type="note" onclick="setRefType('note')">📝 Note</button>
             </div>
-            <input type="hidden" id="f-ref-type" value="${r?.type || 'link'}">
           </div>
-          <div class="field" id="f-ref-url-wrap" ${isFile ? 'style="display:none"' : ''}>
-            <label>URL</label><input id="f-ref-url" type="url" value="${!isFile ? (r?.url || '') : ''}" placeholder="https://…">
+          <div class="field"><label>Name / Title</label><input id="f-refname" value="${r?.name || ''}" placeholder="Emergency contacts, Trail map…" autocomplete="off"></div>
+          ${cats.length ? `<div class="field"><label>Category</label><select id="f-refcat"><option value="uncategorized" ${!r?.cat || r.cat==='uncategorized' ? 'selected' : ''}>— No category —</option>${catOpts}</select></div>` : `<input type="hidden" id="f-refcat" value="uncategorized">`}
+          <div id="ref-link-fields" style="display:${type==='link'?'':'none'}">
+            <div class="field"><label>URL</label><input id="f-refurl" type="url" value="${r?.url || ''}" placeholder="https://..."></div>
           </div>
-          <div class="field" id="f-ref-file-wrap" ${!isFile ? 'style="display:none"' : ''}>
-            <label>File</label>
-            ${editing && isFile ? `<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Current: <a href="${r.url}" target="_blank" style="color:var(--gold2)">${r.name}</a> — select below to replace</div>` : ''}
-            <input id="f-ref-file" type="file">
+          <div id="ref-file-fields" style="display:${type==='file'?'':'none'}">
+            ${editing && r?.fileName ? `<div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-family:'JetBrains Mono',monospace">Current: ${r.fileName}</div>` : ''}
+            <div class="field"><label>${editing ? 'Replace file (optional)' : 'File'}</label><input id="f-reffile" type="file"></div>
           </div>
-          <div class="field">
-            <label>Category</label>
-            <select id="f-ref-cat">
-              ${catOpts}
-              <option value="" ${!r?.cat || !appData.refCats?.find(c=>c.id===r.cat) ? 'selected' : ''}>📌 Uncategorized</option>
-            </select>
+          <div id="ref-note-fields" style="display:${type==='note'?'':'none'}">
+            <div class="field"><label>Content</label><textarea id="f-refcontent" style="height:120px" placeholder="Write your note here…">${r?.content ? r.content.replace(/</g,'&lt;') : ''}</textarea></div>
           </div>
-          <div class="field"><label>Notes (optional)</label><textarea id="f-ref-notes" placeholder="Context, deadline, password…">${r?.notes || ''}</textarea></div>
-          <button class="btn-primary" onclick="submitRef()">${editing ? 'Save Changes' : 'Add Reference'}</button>
+          <button class="btn-primary" onclick="submitRef()">${editing ? 'Save Changes' : 'Add Item'}</button>
           ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteRef(${_editRefIdx})">× Remove</button>` : ''}
           <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
-        </div>`; }
+        </div>`;
+    }
 
     case 'ref-cat-form': {
       const editing = _editRefCatIdx >= 0;
-      const cat = editing ? appData.refCats[_editRefCatIdx] : null;
+      const cat = editing ? (appData.refCats||[])[_editRefCatIdx] : null;
       return `
         <div class="sheet-title">${editing ? 'Edit Category' : 'Add Category'}</div>
         <div class="sheet-body">
           <div style="display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:start">
-            <div class="field"><label>Icon</label><input id="f-cat-icon" value="${cat?.icon || ''}" placeholder="📁" maxlength="4" style="font-size:24px;text-align:center;padding:8px 4px"></div>
-            <div class="field"><label>Name</label><input id="f-cat-label" value="${cat?.label || ''}" placeholder="Bookings, Trails…" autocomplete="off"></div>
+            <div class="field"><label>Icon</label><input id="f-cat-icon" value="${cat?.icon || ''}" placeholder="📌" maxlength="4" style="font-size:24px;text-align:center;padding:8px 4px"></div>
+            <div class="field"><label>Name</label><input id="f-cat-label" value="${cat?.label || ''}" placeholder="Emergency, Bookings…" autocomplete="off"></div>
           </div>
           <button class="btn-primary" onclick="submitRefCat()">${editing ? 'Save Changes' : 'Add Category'}</button>
           ${editing ? `<button class="btn-secondary btn-danger" onclick="deleteRefCat(${_editRefCatIdx})">× Delete Category</button>` : ''}
           <button class="btn-secondary" onclick="_closeSheet()">Cancel</button>
-        </div>`; }
+        </div>`;
+    }
 
     case 'stop-form': {
       const editing = _editStopIdx >= 0;
