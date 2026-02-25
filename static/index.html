@@ -1548,14 +1548,27 @@ function submitDay() {
   saveData().then(() => { _closeSheet(); renderTab('itinerary'); });
 }
 
-// ── Info board: drag-to-reorder (touch + mouse) ────────────────────────────────
+// ── Info board: drag-to-reorder (touch + mouse, with edge auto-scroll) ────────
 function initBulletinDrag() {
   if (!isAdmin) return;
-  const board = document.querySelector('.bulletin-board');
+  const board    = document.querySelector('.bulletin-board');
+  const scrollEl = document.getElementById('content');
   if (!board) return;
 
   let ghost = null, srcEl = null, srcType = null;
   let startX = 0, startY = 0, startRect = null, moved = false;
+  let curX = 0, curY = 0, rafId = null;
+
+  const EDGE = 80, SPEED = 10;
+
+  function autoScroll() {
+    if (!ghost || !scrollEl) return;
+    const vh = window.innerHeight;
+    if (curY < EDGE)           scrollEl.scrollTop -= SPEED * (1 - curY / EDGE);
+    else if (curY > vh - EDGE) scrollEl.scrollTop += SPEED * (1 - (vh - curY) / EDGE);
+    rafId = requestAnimationFrame(autoScroll);
+  }
+  function stopScroll() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
 
   function coord(e) {
     if (e.touches)        return { x: e.touches[0].clientX,        y: e.touches[0].clientY };
@@ -1598,18 +1611,17 @@ function initBulletinDrag() {
     }
   }
 
-  function dragStart(e, handle) {
+  function dragStart(handle, x, y) {
     srcType   = handle.classList.contains('ref-drag-handle') ? 'item' : 'cat';
     srcEl     = handle.closest(srcType === 'item' ? '.ref-item' : '.bulletin-section');
     if (!srcEl) { srcEl = null; return; }
-    const {x, y} = coord(e);
-    startX = x; startY = y;
+    curX = startX = x; curY = startY = y;
     startRect = srcEl.getBoundingClientRect();
     moved = false;
   }
-  function dragMove(e) {
+  function dragMove(x, y, cancelable) {
     if (!srcEl) return;
-    const {x, y} = coord(e);
+    curX = x; curY = y;
     const dx = x - startX, dy = y - startY;
     if (!moved && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
       moved = true;
@@ -1623,9 +1635,9 @@ function initBulletinDrag() {
       });
       document.body.appendChild(ghost);
       srcEl.classList.add('drag-src');
+      rafId = requestAnimationFrame(autoScroll);
     }
     if (moved) {
-      if (e.cancelable) e.preventDefault();
       ghost.style.left = (startRect.left + dx)+'px';
       ghost.style.top  = (startRect.top  + dy)+'px';
       clearHL();
@@ -1633,13 +1645,13 @@ function initBulletinDrag() {
       if (tgt) tgt.classList.add(srcType === 'item' ? 'drag-over' : 'drag-over-section');
     }
   }
-  function dragEnd(e) {
+  function dragEnd(x, y) {
+    stopScroll();
     if (!srcEl) return;
     if (moved) {
       ghost?.remove(); ghost = null;
       srcEl.classList.remove('drag-src');
       clearHL();
-      const {x, y} = coord(e);
       const tgt = getTarget(x, y);
       if (tgt && tgt !== srcEl) drop(tgt);
     }
@@ -1652,23 +1664,23 @@ function initBulletinDrag() {
     const t = e.touches[0];
     const h = document.elementFromPoint(t.clientX, t.clientY)
       ?.closest('.ref-drag-handle, .bulletin-cat-handle');
-    if (h) dragStart(e, h);
+    if (h) dragStart(h, t.clientX, t.clientY);
   }, { passive: true });
   document.addEventListener('touchmove', e => {
-    if (srcEl) dragMove(e);
+    if (srcEl) { if (e.cancelable) e.preventDefault(); dragMove(e.touches[0].clientX, e.touches[0].clientY); }
   }, { passive: false });
-  document.addEventListener('touchend',    e => dragEnd(e));
-  document.addEventListener('touchcancel', e => dragEnd(e));
+  document.addEventListener('touchend',    e => dragEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY));
+  document.addEventListener('touchcancel', e => dragEnd(e.changedTouches[0]?.clientX ?? 0, e.changedTouches[0]?.clientY ?? 0));
 
   // ── Mouse (desktop) ──
   board.addEventListener('mousedown', e => {
     const h = e.target.closest('.ref-drag-handle, .bulletin-cat-handle');
     if (!h) return;
     e.preventDefault();
-    dragStart(e, h);
-    function onMove(ev) { dragMove(ev); }
+    dragStart(h, e.clientX, e.clientY);
+    function onMove(ev) { dragMove(ev.clientX, ev.clientY); }
     function onUp(ev)   {
-      dragEnd(ev);
+      dragEnd(ev.clientX, ev.clientY);
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup',   onUp);
     }
@@ -1681,28 +1693,21 @@ function initBulletinDrag() {
 let _wishlistPrefill = null;
 
 function initWishlistDrag() {
-  const scrollEl = document.getElementById('content'); // scrollable tab container
+  const scrollEl = document.getElementById('content');
   let ghost = null, srcEl = null, srcWi = -1;
   let startX = 0, startY = 0, startRect = null;
   let curX = 0, curY = 0, rafId = null;
 
-  const EDGE = 90;   // px from viewport top/bottom that triggers scroll
-  const SPEED = 10;  // max px per frame
+  const EDGE = 90, SPEED = 10;
 
   function autoScroll() {
     if (!ghost || !scrollEl) return;
     const vh = window.innerHeight;
-    if (curY < EDGE) {
-      scrollEl.scrollTop -= SPEED * (1 - curY / EDGE);
-    } else if (curY > vh - EDGE) {
-      scrollEl.scrollTop += SPEED * (1 - (vh - curY) / EDGE);
-    }
+    if (curY < EDGE)           scrollEl.scrollTop -= SPEED * (1 - curY / EDGE);
+    else if (curY > vh - EDGE) scrollEl.scrollTop += SPEED * (1 - (vh - curY) / EDGE);
     rafId = requestAnimationFrame(autoScroll);
   }
-
-  function stopScroll() {
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-  }
+  function stopScroll() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
 
   function dayCardAt(x, y) {
     for (const el of document.elementsFromPoint(x, y)) {
@@ -1712,64 +1717,86 @@ function initWishlistDrag() {
     return null;
   }
 
+  // ── shared drag helpers ──
+  function startDrag(card, wi, x, y) {
+    srcEl = card; srcWi = wi;
+    curX = startX = x; curY = startY = y;
+    startRect = card.getBoundingClientRect();
+  }
+  function moveDrag(x, y) {
+    if (!srcEl) return false;
+    curX = x; curY = y;
+    const dx = x - startX, dy = y - startY;
+    if (!ghost && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      ghost = srcEl.cloneNode(true);
+      Object.assign(ghost.style, {
+        position:'fixed', pointerEvents:'none', zIndex:'9999',
+        width: srcEl.offsetWidth+'px',
+        left: startRect.left+'px', top: startRect.top+'px',
+        opacity:'0.92', transform:'rotate(-3deg) scale(1.1)',
+        boxShadow:'0 12px 32px rgba(0,0,0,0.55)', transition:'none'
+      });
+      document.body.appendChild(ghost);
+      srcEl.classList.add('drag-src');
+      document.querySelectorAll('.card[id^="day-"]').forEach(c => c.classList.add('drop-zone-active'));
+      rafId = requestAnimationFrame(autoScroll);
+    }
+    if (ghost) {
+      ghost.style.left = (startRect.left + dx)+'px';
+      ghost.style.top  = (startRect.top  + dy)+'px';
+      return true;
+    }
+    return false;
+  }
+  function endDrag(x, y) {
+    stopScroll();
+    if (!srcEl) return;
+    ghost?.remove(); ghost = null;
+    srcEl.classList.remove('drag-src');
+    document.querySelectorAll('.card[id^="day-"]').forEach(c => c.classList.remove('drop-zone-active'));
+    const dayCard = dayCardAt(x, y);
+    if (dayCard && srcWi >= 0) {
+      const dayId = dayCard.id.replace('day-', '');
+      const di = appData.days.findIndex(d => d.id === dayId);
+      if (di >= 0) dropWishlistOnDay(srcWi, di);
+    }
+    srcEl = null; srcWi = -1;
+  }
+  function cancelDrag() {
+    stopScroll();
+    ghost?.remove(); ghost = null;
+    if (srcEl) srcEl.classList.remove('drag-src');
+    document.querySelectorAll('.card[id^="day-"]').forEach(c => c.classList.remove('drop-zone-active'));
+    srcEl = null; srcWi = -1;
+  }
+
   document.querySelectorAll('.wishlist-drag-handle[data-wi]').forEach(handle => {
+    const card = handle.closest('.wishlist-card');
+    const wi   = parseInt(handle.dataset.wi);
+
+    // ── Touch ──
     handle.addEventListener('touchstart', e => {
       if (e.touches.length !== 1) return;
-      srcEl  = handle.closest('.wishlist-card');
-      srcWi  = parseInt(handle.dataset.wi);
-      curX   = startX = e.touches[0].clientX;
-      curY   = startY = e.touches[0].clientY;
-      startRect = srcEl?.getBoundingClientRect();
+      startDrag(card, wi, e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
-
     handle.addEventListener('touchmove', e => {
-      if (!srcEl) return;
-      curX = e.touches[0].clientX;
-      curY = e.touches[0].clientY;
-      const dx = curX - startX, dy = curY - startY;
-      if (!ghost && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-        ghost = srcEl.cloneNode(true);
-        Object.assign(ghost.style, {
-          position:'fixed', pointerEvents:'none', zIndex:'9999',
-          width: srcEl.offsetWidth+'px',
-          left: startRect.left+'px', top: startRect.top+'px',
-          opacity:'0.92', transform:'rotate(-3deg) scale(1.1)',
-          boxShadow:'0 12px 32px rgba(0,0,0,0.55)', transition:'none'
-        });
-        document.body.appendChild(ghost);
-        srcEl.classList.add('drag-src');
-        document.querySelectorAll('.card[id^="day-"]').forEach(c => c.classList.add('drop-zone-active'));
-        rafId = requestAnimationFrame(autoScroll);
-      }
-      if (ghost) {
-        e.preventDefault();
-        ghost.style.left = (startRect.left + dx)+'px';
-        ghost.style.top  = (startRect.top  + dy)+'px';
-      }
+      if (moveDrag(e.touches[0].clientX, e.touches[0].clientY)) e.preventDefault();
     }, { passive: false });
+    handle.addEventListener('touchend',   e => endDrag(e.changedTouches[0].clientX, e.changedTouches[0].clientY));
+    handle.addEventListener('touchcancel', () => cancelDrag());
 
-    handle.addEventListener('touchend', e => {
-      stopScroll();
-      if (!srcEl) return;
-      ghost?.remove(); ghost = null;
-      srcEl.classList.remove('drag-src');
-      document.querySelectorAll('.card[id^="day-"]').forEach(c => c.classList.remove('drop-zone-active'));
-      const t = e.changedTouches[0];
-      const dayCard = dayCardAt(t.clientX, t.clientY);
-      if (dayCard && srcWi >= 0) {
-        const dayId = dayCard.id.replace('day-', '');
-        const di = appData.days.findIndex(d => d.id === dayId);
-        if (di >= 0) dropWishlistOnDay(srcWi, di);
+    // ── Mouse (desktop) ──
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      startDrag(card, wi, e.clientX, e.clientY);
+      function onMove(ev) { moveDrag(ev.clientX, ev.clientY); }
+      function onUp(ev)   {
+        endDrag(ev.clientX, ev.clientY);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onUp);
       }
-      srcEl = null; srcWi = -1;
-    });
-
-    handle.addEventListener('touchcancel', () => {
-      stopScroll();
-      ghost?.remove(); ghost = null;
-      if (srcEl) srcEl.classList.remove('drag-src');
-      document.querySelectorAll('.card[id^="day-"]').forEach(c => c.classList.remove('drop-zone-active'));
-      srcEl = null; srcWi = -1;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onUp);
     });
   });
 }
