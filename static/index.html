@@ -1097,28 +1097,8 @@
     color: var(--gold2);
   }
 
-  /* ── Bulletin board (Info tab) ─────────────────────────────────────────── */
-  .bulletin-viewport {
-    position: relative;
-    overflow: hidden;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    height: calc(100dvh - 240px);
-    min-height: 200px;
-    touch-action: none;
-    cursor: grab;
-  }
-  .bulletin-viewport:active { cursor: grabbing; }
-  .bulletin-canvas {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    transform-origin: 0 0;
-    padding: 14px;
-    will-change: transform;
-  }
-  .bulletin-section { margin-bottom: 18px; }
+  /* ── Info board (refs tab) ─────────────────────────────────────────────── */
+  .bulletin-section { margin-bottom: 20px; }
   .bulletin-section:last-child { margin-bottom: 4px; }
   .bulletin-section-label {
     font-family: 'Syne', sans-serif;
@@ -1147,84 +1127,24 @@
     padding: 2px 4px;
     letter-spacing: 2px;
     flex-shrink: 0;
+    user-select: none;
   }
   .bulletin-section.drag-src-section > .bulletin-section-label { opacity: 0.3; }
   .bulletin-section.drag-over-section > .bulletin-section-label { color: var(--gold2); }
   .bulletin-section.drag-over-section > .bulletin-section-label::after { background: var(--gold); }
-  .blist { display: flex; flex-direction: column; gap: 6px; }
-  /* ── Full-content item row ── */
-  .bitem {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 10px 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    transition: opacity 0.15s, border-color 0.15s, box-shadow 0.15s;
-  }
-  .bitem.drag-src  { opacity: 0.25; }
-  .bitem.drag-over { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-dim); }
-  .bitem-main { display: flex; align-items: flex-start; gap: 8px; }
-  .bitem-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
-  .bitem-body { flex: 1; min-width: 0; }
-  .bitem-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
-  .bitem-content {
-    font-size: 12px;
-    color: var(--text2);
-    line-height: 1.5;
-    margin-top: 4px;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .bitem-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 5px;
-    padding: 4px 10px;
-    background: var(--card2);
-    border: 1px solid var(--border2);
-    border-radius: 6px;
-    color: var(--gold2);
-    font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-    text-decoration: none;
-    word-break: break-all;
-    max-width: 100%;
-  }
-  .bitem-file {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 5px;
-    padding: 4px 10px;
-    background: var(--card2);
-    border: 1px solid var(--border2);
-    border-radius: 6px;
-    color: var(--text2);
-    font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-    text-decoration: none;
-    max-width: 100%;
-  }
-  .bitem-controls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-  .bitem-handle {
+  /* Item drag handle inside ref-item header */
+  .ref-drag-handle {
     font-size: 14px;
     color: var(--text3);
     touch-action: none;
     cursor: grab;
     letter-spacing: 2px;
-    padding: 2px;
-    line-height: 1;
+    padding: 0 6px 0 0;
+    flex-shrink: 0;
+    user-select: none;
   }
-  .bitem-edit { font-size: 13px; color: var(--text3); cursor: pointer; padding: 2px; }
+  .ref-item.drag-src  { opacity: 0.25; }
+  .ref-item.drag-over { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-dim); }
   .bulletin-add-card {
     border: 1.5px dashed var(--border2);
     border-radius: 10px;
@@ -1236,15 +1156,9 @@
     font-size: 22px;
     cursor: pointer;
     transition: background 0.15s;
+    margin-top: 6px;
   }
   .bulletin-add-card:active { background: var(--card2); }
-  .bulletin-zoom-hint {
-    text-align: center;
-    font-size: 10px;
-    color: var(--text3);
-    padding: 5px 0 2px;
-    font-family: 'JetBrains Mono', monospace;
-  }
 
   /* ── Wishlist scratchpad (Itinerary bottom) ────────────────────────────── */
   .wishlist-board {
@@ -1634,31 +1548,28 @@ function submitDay() {
   saveData().then(() => { _closeSheet(); renderTab('itinerary'); });
 }
 
-// ── Bulletin board: drag-to-reorder + pinch-zoom + pan ────────────────────────
+// ── Info board: drag-to-reorder (touch + mouse) ────────────────────────────────
 function initBulletinDrag() {
-  const viewport = document.getElementById('bulletin-viewport');
-  const canvas   = document.getElementById('bulletin-canvas');
-  if (!viewport || !canvas) return;
+  if (!isAdmin) return;
+  const board = document.querySelector('.bulletin-board');
+  if (!board) return;
 
-  // ── Shared state ──
-  let mode      = null; // 'drag' | 'pan' | 'pinch'
-  let ghost     = null, srcEl = null, srcType = null;
-  let startX    = 0,    startY = 0, startRect = null, moved = false;
-  let panStartX = 0,    panStartY = 0, panStartTx = 0, panStartTy = 0;
-  let lastDist  = 0,    lastMidX = 0, lastMidY = 0;
-  let scale = 1, tx = 0, ty = 0;
+  let ghost = null, srcEl = null, srcType = null;
+  let startX = 0, startY = 0, startRect = null, moved = false;
 
-  function applyTransform() {
-    canvas.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+  function coord(e) {
+    if (e.touches)        return { x: e.touches[0].clientX,        y: e.touches[0].clientY };
+    if (e.changedTouches) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
   }
-  function clearHighlights() {
-    canvas.querySelectorAll('.bitem.drag-over,.bulletin-section.drag-over-section')
-      .forEach(e => e.classList.remove('drag-over','drag-over-section'));
+  function clearHL() {
+    board.querySelectorAll('.ref-item.drag-over,.bulletin-section.drag-over-section')
+      .forEach(el => el.classList.remove('drag-over','drag-over-section'));
   }
-  function getDropTarget(x, y) {
+  function getTarget(x, y) {
     for (const el of document.elementsFromPoint(x, y)) {
       if (srcType === 'item') {
-        const c = el.closest('.bitem[data-ref-id]');
+        const c = el.closest('.ref-item[data-ref-id]');
         if (c && c !== srcEl && c.dataset.catId === srcEl.dataset.catId) return c;
       } else {
         const s = el.closest('.bulletin-section[data-cat-id]');
@@ -1667,14 +1578,13 @@ function initBulletinDrag() {
     }
     return null;
   }
-  function performDrop(tgt) {
+  function drop(tgt) {
     if (srcType === 'item') {
       const refs = appData.refs;
       const si = refs.findIndex(r => r.id === srcEl.dataset.refId);
       const ti = refs.findIndex(r => r.id === tgt.dataset.refId);
       if (si >= 0 && ti >= 0 && si !== ti) {
-        const [item] = refs.splice(si, 1);
-        refs.splice(ti, 0, item);
+        refs.splice(ti, 0, refs.splice(si, 1)[0]);
         saveData().then(() => renderTab('refs'));
       }
     } else {
@@ -1682,114 +1592,88 @@ function initBulletinDrag() {
       const si = cats.findIndex(c => c.id === srcEl.dataset.catId);
       const ti = cats.findIndex(c => c.id === tgt.dataset.catId);
       if (si >= 0 && ti >= 0 && si !== ti) {
-        const [cat] = cats.splice(si, 1);
-        cats.splice(ti, 0, cat);
+        cats.splice(ti, 0, cats.splice(si, 1)[0]);
         saveData().then(() => renderTab('refs'));
       }
     }
   }
-  function getTouchDist(t) {
-    return Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY);
+
+  function dragStart(e, handle) {
+    srcType   = handle.classList.contains('ref-drag-handle') ? 'item' : 'cat';
+    srcEl     = handle.closest(srcType === 'item' ? '.ref-item' : '.bulletin-section');
+    if (!srcEl) { srcEl = null; return; }
+    const {x, y} = coord(e);
+    startX = x; startY = y;
+    startRect = srcEl.getBoundingClientRect();
+    moved = false;
+  }
+  function dragMove(e) {
+    if (!srcEl) return;
+    const {x, y} = coord(e);
+    const dx = x - startX, dy = y - startY;
+    if (!moved && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      moved = true;
+      ghost = srcEl.cloneNode(true);
+      Object.assign(ghost.style, {
+        position:'fixed', pointerEvents:'none', zIndex:'9999',
+        width: srcEl.offsetWidth+'px', left: startRect.left+'px', top: startRect.top+'px',
+        opacity:'0.85', transition:'none',
+        boxShadow:'0 8px 28px rgba(0,0,0,0.5)',
+        border:'1px solid var(--gold)', borderRadius:'10px'
+      });
+      document.body.appendChild(ghost);
+      srcEl.classList.add('drag-src');
+    }
+    if (moved) {
+      if (e.cancelable) e.preventDefault();
+      ghost.style.left = (startRect.left + dx)+'px';
+      ghost.style.top  = (startRect.top  + dy)+'px';
+      clearHL();
+      const tgt = getTarget(x, y);
+      if (tgt) tgt.classList.add(srcType === 'item' ? 'drag-over' : 'drag-over-section');
+    }
+  }
+  function dragEnd(e) {
+    if (!srcEl) return;
+    if (moved) {
+      ghost?.remove(); ghost = null;
+      srcEl.classList.remove('drag-src');
+      clearHL();
+      const {x, y} = coord(e);
+      const tgt = getTarget(x, y);
+      if (tgt && tgt !== srcEl) drop(tgt);
+    }
+    srcEl = null; srcType = null; moved = false;
   }
 
-  // ── touchstart: decide mode ──
-  viewport.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
-      mode = 'pinch';
-      lastDist = getTouchDist(e.touches);
-      lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-      lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      return;
-    }
+  // ── Touch ──
+  board.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
-    if (isAdmin) {
-      const handle = document.elementFromPoint(t.clientX, t.clientY)
-        ?.closest('.bitem-handle[data-ref-id], .bulletin-cat-handle[data-cat-id]');
-      if (handle) {
-        mode    = 'drag';
-        srcType = handle.classList.contains('bitem-handle') ? 'item' : 'cat';
-        srcEl   = handle.closest(srcType === 'item' ? '.bitem' : '.bulletin-section');
-        startX  = t.clientX; startY = t.clientY;
-        startRect = srcEl?.getBoundingClientRect();
-        moved   = false;
-        return;
-      }
-    }
-    mode      = 'pan';
-    panStartX = t.clientX; panStartY = t.clientY;
-    panStartTx = tx; panStartTy = ty;
+    const h = document.elementFromPoint(t.clientX, t.clientY)
+      ?.closest('.ref-drag-handle, .bulletin-cat-handle');
+    if (h) dragStart(e, h);
   }, { passive: true });
-
-  // ── touchmove: execute mode ──
-  viewport.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (mode === 'pinch' && e.touches.length === 2) {
-      const d    = getTouchDist(e.touches);
-      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      const ds   = d / lastDist;
-      const ns   = Math.max(0.25, Math.min(3.0, scale * ds));
-      const rect = viewport.getBoundingClientRect();
-      const ox   = midX - rect.left, oy = midY - rect.top;
-      tx = ox - (ox - tx) * (ns / scale) + (midX - lastMidX);
-      ty = oy - (oy - ty) * (ns / scale) + (midY - lastMidY);
-      scale = ns;
-      lastDist = d; lastMidX = midX; lastMidY = midY;
-      applyTransform();
-    } else if (mode === 'drag' && srcEl && e.touches.length === 1) {
-      const t  = e.touches[0];
-      const dx = t.clientX - startX, dy = t.clientY - startY;
-      if (!moved && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-        moved = true;
-        ghost = srcEl.cloneNode(true);
-        Object.assign(ghost.style, {
-          position:'fixed', pointerEvents:'none', zIndex:'9999',
-          width: srcEl.offsetWidth+'px',
-          left: startRect.left+'px', top: startRect.top+'px',
-          opacity:'0.85', transition:'none',
-          boxShadow:'0 8px 28px rgba(0,0,0,0.5)',
-          border:'1px solid var(--gold)', borderRadius:'10px',
-          background:'var(--card2)'
-        });
-        document.body.appendChild(ghost);
-        srcEl.classList.add('drag-src');
-      }
-      if (moved) {
-        ghost.style.left = (startRect.left + dx)+'px';
-        ghost.style.top  = (startRect.top  + dy)+'px';
-        clearHighlights();
-        const tgt = getDropTarget(t.clientX, t.clientY);
-        if (tgt) tgt.classList.add(srcType === 'item' ? 'drag-over' : 'drag-over-section');
-      }
-    } else if (mode === 'pan' && e.touches.length === 1) {
-      tx = panStartTx + e.touches[0].clientX - panStartX;
-      ty = panStartTy + e.touches[0].clientY - panStartY;
-      applyTransform();
-    }
+  document.addEventListener('touchmove', e => {
+    if (srcEl) dragMove(e);
   }, { passive: false });
+  document.addEventListener('touchend',    e => dragEnd(e));
+  document.addEventListener('touchcancel', e => dragEnd(e));
 
-  // ── touchend / cancel ──
-  viewport.addEventListener('touchend', e => {
-    if (mode === 'drag' && srcEl) {
-      if (moved) {
-        ghost?.remove(); ghost = null;
-        srcEl.classList.remove('drag-src');
-        clearHighlights();
-        const t   = e.changedTouches[0];
-        const tgt = getDropTarget(t.clientX, t.clientY);
-        if (tgt && tgt !== srcEl) performDrop(tgt);
-      }
-      srcEl = null; srcType = null; moved = false;
+  // ── Mouse (desktop) ──
+  board.addEventListener('mousedown', e => {
+    const h = e.target.closest('.ref-drag-handle, .bulletin-cat-handle');
+    if (!h) return;
+    e.preventDefault();
+    dragStart(e, h);
+    function onMove(ev) { dragMove(ev); }
+    function onUp(ev)   {
+      dragEnd(ev);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
     }
-    if (e.touches.length === 0)      mode = null;
-    else if (e.touches.length === 1) mode = 'pan';
-  });
-  viewport.addEventListener('touchcancel', () => {
-    ghost?.remove(); ghost = null;
-    if (srcEl) { srcEl.classList.remove('drag-src'); srcEl = null; }
-    clearHighlights();
-    mode = null;
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
   });
 }
 
@@ -1797,8 +1681,28 @@ function initBulletinDrag() {
 let _wishlistPrefill = null;
 
 function initWishlistDrag() {
+  const scrollEl = document.getElementById('content'); // scrollable tab container
   let ghost = null, srcEl = null, srcWi = -1;
   let startX = 0, startY = 0, startRect = null;
+  let curX = 0, curY = 0, rafId = null;
+
+  const EDGE = 90;   // px from viewport top/bottom that triggers scroll
+  const SPEED = 10;  // max px per frame
+
+  function autoScroll() {
+    if (!ghost || !scrollEl) return;
+    const vh = window.innerHeight;
+    if (curY < EDGE) {
+      scrollEl.scrollTop -= SPEED * (1 - curY / EDGE);
+    } else if (curY > vh - EDGE) {
+      scrollEl.scrollTop += SPEED * (1 - (vh - curY) / EDGE);
+    }
+    rafId = requestAnimationFrame(autoScroll);
+  }
+
+  function stopScroll() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  }
 
   function dayCardAt(x, y) {
     for (const el of document.elementsFromPoint(x, y)) {
@@ -1811,38 +1715,41 @@ function initWishlistDrag() {
   document.querySelectorAll('.wishlist-drag-handle[data-wi]').forEach(handle => {
     handle.addEventListener('touchstart', e => {
       if (e.touches.length !== 1) return;
-      srcEl = handle.closest('.wishlist-card');
-      srcWi = parseInt(handle.dataset.wi);
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
+      srcEl  = handle.closest('.wishlist-card');
+      srcWi  = parseInt(handle.dataset.wi);
+      curX   = startX = e.touches[0].clientX;
+      curY   = startY = e.touches[0].clientY;
       startRect = srcEl?.getBoundingClientRect();
     }, { passive: true });
 
     handle.addEventListener('touchmove', e => {
       if (!srcEl) return;
-      const dx = e.touches[0].clientX - startX;
-      const dy = e.touches[0].clientY - startY;
+      curX = e.touches[0].clientX;
+      curY = e.touches[0].clientY;
+      const dx = curX - startX, dy = curY - startY;
       if (!ghost && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
         ghost = srcEl.cloneNode(true);
         Object.assign(ghost.style, {
           position:'fixed', pointerEvents:'none', zIndex:'9999',
-          width: srcEl.offsetWidth + 'px',
-          left: startRect.left + 'px', top: startRect.top + 'px',
+          width: srcEl.offsetWidth+'px',
+          left: startRect.left+'px', top: startRect.top+'px',
           opacity:'0.92', transform:'rotate(-3deg) scale(1.1)',
           boxShadow:'0 12px 32px rgba(0,0,0,0.55)', transition:'none'
         });
         document.body.appendChild(ghost);
         srcEl.classList.add('drag-src');
         document.querySelectorAll('.card[id^="day-"]').forEach(c => c.classList.add('drop-zone-active'));
+        rafId = requestAnimationFrame(autoScroll);
       }
       if (ghost) {
         e.preventDefault();
-        ghost.style.left = (startRect.left + dx) + 'px';
-        ghost.style.top  = (startRect.top  + dy) + 'px';
+        ghost.style.left = (startRect.left + dx)+'px';
+        ghost.style.top  = (startRect.top  + dy)+'px';
       }
     }, { passive: false });
 
     handle.addEventListener('touchend', e => {
+      stopScroll();
       if (!srcEl) return;
       ghost?.remove(); ghost = null;
       srcEl.classList.remove('drag-src');
@@ -1854,6 +1761,14 @@ function initWishlistDrag() {
         const di = appData.days.findIndex(d => d.id === dayId);
         if (di >= 0) dropWishlistOnDay(srcWi, di);
       }
+      srcEl = null; srcWi = -1;
+    });
+
+    handle.addEventListener('touchcancel', () => {
+      stopScroll();
+      ghost?.remove(); ghost = null;
+      if (srcEl) srcEl.classList.remove('drag-src');
+      document.querySelectorAll('.card[id^="day-"]').forEach(c => c.classList.remove('drop-zone-active'));
       srcEl = null; srcWi = -1;
     });
   });
@@ -2223,67 +2138,61 @@ function renderRefs() {
     return header + `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nothing here yet.<br>${isAdmin ? 'Tap <strong>＋ Category</strong> to get started.' : 'Admin will add info here.'}</div></div>`;
   }
 
-  function _bitem(r) {
+  function _refCard(r) {
     const ri     = refs.indexOf(r);
     const catId  = r.cat || 'uncategorized';
     const typeIcon = r.type === 'link' ? '🔗' : r.type === 'file' ? '📎' : '📝';
-    let contentHtml = '';
-    if (r.type === 'note' && r.content) {
-      const safe = r.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      contentHtml = `<div class="bitem-content">${safe}</div>`;
-    } else if (r.type === 'link' && r.url) {
-      const display = r.url.replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'');
-      contentHtml = `<a class="bitem-link" href="${r.url}" target="_blank" onclick="event.stopPropagation()">↗ ${display}</a>`;
-    } else if (r.type === 'file') {
-      const display = r.fileName || r.name;
-      contentHtml = `<a class="bitem-file" href="${r.fileUrl||'#'}" target="_blank" onclick="event.stopPropagation()">↓ ${display}</a>`;
+    let actionBtn = '';
+    if (r.type === 'link' && r.url) {
+      actionBtn = `<a href="${r.url}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold2);font-size:18px;text-decoration:none;padding:2px 8px;flex-shrink:0">↗</a>`;
+    } else if (r.type === 'file' && r.fileUrl) {
+      actionBtn = `<a href="${r.fileUrl}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold2);font-size:18px;text-decoration:none;padding:2px 8px;flex-shrink:0">↓</a>`;
     }
-    return `<div class="bitem" data-ref-id="${r.id}" data-cat-id="${catId}">
-      <div class="bitem-main">
-        <span class="bitem-icon">${typeIcon}</span>
-        <div class="bitem-body">
-          <div class="bitem-title">${r.name}</div>
-          ${contentHtml}
-        </div>
-        <div class="bitem-controls">
-          ${isAdmin ? `<span class="bitem-edit" onclick="event.stopPropagation();editRef(${ri})">✏️</span>` : ''}
-          ${isAdmin ? `<span class="bitem-handle" data-ref-id="${r.id}">⠿</span>` : ''}
-        </div>
+    let bodyHtml = '';
+    if (r.type === 'note' && r.content) {
+      bodyHtml = `<div style="padding:0 14px 12px"><div class="note-content">${r.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div></div>`;
+    } else if (r.type === 'link' && r.url) {
+      bodyHtml = `<div style="padding:0 14px 10px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;word-break:break-all">${r.url}</div>`;
+    } else if (r.type === 'file' && r.fileName) {
+      bodyHtml = `<div style="padding:0 14px 10px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${r.fileName}</div>`;
+    }
+    return `<div class="ref-item" data-ref-id="${r.id}" data-cat-id="${catId}">
+      <div class="ref-item-header">
+        ${isAdmin ? `<span class="ref-drag-handle" data-ref-id="${r.id}">⠿</span>` : ''}
+        <div class="ref-item-icon">${typeIcon}</div>
+        <div class="ref-item-name">${r.name}</div>
+        ${isAdmin ? `<div onclick="editRef(${ri})" style="color:var(--text3);font-size:15px;cursor:pointer;padding:2px 6px;flex-shrink:0">✏️</div>` : ''}
+        ${actionBtn}
       </div>
+      ${bodyHtml}
     </div>`;
   }
 
-  let boardHtml = '<div class="bulletin-board">';
+  let html = '<div class="bulletin-board">';
 
   cats.forEach((cat, ci) => {
     const catRefs = refs.filter(r => (r.cat || r.catId) === cat.id);
-    boardHtml += `<div class="bulletin-section" data-cat-id="${cat.id}">
+    html += `<div class="bulletin-section" data-cat-id="${cat.id}">
       <div class="bulletin-section-label">
         ${isAdmin ? `<span class="bulletin-cat-handle" data-cat-id="${cat.id}">⠿</span>` : ''}
         <span>${cat.icon} ${cat.label}</span>
         ${isAdmin ? `<span onclick="editRefCat(${ci})" style="font-size:13px;cursor:pointer;color:var(--text3);font-family:'DM Sans',sans-serif;letter-spacing:0;text-transform:none;font-weight:400">✏️</span>` : ''}
-      </div>
-      <div class="blist" id="bgrid-${cat.id}">`;
-    catRefs.forEach(r => { boardHtml += _bitem(r); });
-    if (isAdmin) boardHtml += `<div class="bulletin-add-card" onclick="addRef('${cat.id}')">＋</div>`;
-    boardHtml += `</div></div>`;
+      </div>`;
+    catRefs.forEach(r => { html += _refCard(r); });
+    if (isAdmin) html += `<div class="bulletin-add-card" onclick="addRef('${cat.id}')">＋</div>`;
+    html += `</div>`;
   });
 
   const uncat = refs.filter(r => !r.cat || r.cat === 'uncategorized');
   if (uncat.length || (!cats.length && isAdmin)) {
-    boardHtml += `<div class="bulletin-section" data-cat-id="uncategorized">
-      <div class="bulletin-section-label"><span>📂 Other</span></div>
-      <div class="blist" id="bgrid-uncategorized">`;
-    uncat.forEach(r => { boardHtml += _bitem(r); });
-    if (isAdmin) boardHtml += `<div class="bulletin-add-card" onclick="addRef('uncategorized')">＋</div>`;
-    boardHtml += `</div></div>`;
+    html += `<div class="bulletin-section" data-cat-id="uncategorized">
+      <div class="bulletin-section-label"><span>📂 Other</span></div>`;
+    uncat.forEach(r => { html += _refCard(r); });
+    if (isAdmin) html += `<div class="bulletin-add-card" onclick="addRef('uncategorized')">＋</div>`;
+    html += `</div>`;
   }
 
-  boardHtml += '</div>';
-
-  return header
-    + `<div class="bulletin-viewport" id="bulletin-viewport"><div class="bulletin-canvas" id="bulletin-canvas">${boardHtml}</div></div>`
-    + `<div class="bulletin-zoom-hint">pinch · zoom · pan</div>`;
+  return header + html + '</div>';
 }
 
 let _editRefIdx    = -1;
