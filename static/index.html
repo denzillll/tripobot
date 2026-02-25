@@ -2940,11 +2940,16 @@ function sheetContent(type) {
 
     case 'register-member': return `
       <div class="sheet-title">Join the Split 💸</div>
-      <div class="sheet-sub">Set your display name so the group can see who paid what</div>
+      <div class="sheet-sub">Set your name and payment number so the group can settle up with you</div>
       <div class="sheet-body">
         <div class="field">
           <label>Your name</label>
           <input id="f-member-name" placeholder="e.g. Denzil" autocomplete="off" autofocus>
+        </div>
+        <div class="field">
+          <label>Phone / PayNow / PayLah number <span style="color:var(--danger)">*</span></label>
+          <input id="f-member-phone" type="tel" placeholder="e.g. +65 9123 4567" autocomplete="tel">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Shown to others when they need to pay you back</div>
         </div>
         <button class="btn-primary" onclick="submitMemberRegister()">Join the trip</button>
       </div>`;
@@ -3008,13 +3013,24 @@ function sheetContent(type) {
       const fromOpts = members.map(m => `<option value="${m.id}" ${pf?.from===m.id?'selected':''}>${m.name}</option>`).join('');
       const toOpts   = members.map(m => `<option value="${m.id}" ${pf?.to===m.id?'selected':''}>${m.name}</option>`).join('');
       const currOpts = uniqueCurrencies.map(c => `<option value="${c}" ${(pf?.currency||base)===c?'selected':''}>${c}</option>`).join('');
+      const initialTo = pf?.to ? members.find(m => m.id === pf.to) : members[0];
+      const phoneBoxHtml = initialTo?.phone
+        ? `<div id="settle-phone-info" style="display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--gold-dim);border-radius:10px;padding:12px 14px;margin-bottom:4px">
+            <span style="font-size:22px">📱</span>
+            <div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Send payment to <strong style="color:var(--text2)">${initialTo.name}</strong></div>
+              <div style="font-size:16px;font-weight:600;color:var(--gold2);font-family:'JetBrains Mono',monospace;letter-spacing:0.5px">${initialTo.phone}</div>
+            </div>
+          </div>`
+        : `<div id="settle-phone-info" style="display:none"></div>`;
       return `
         <div class="sheet-title">Record Settlement</div>
         <div class="sheet-sub">Log a payment made to settle a debt</div>
         <div class="sheet-body">
+          ${phoneBoxHtml}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="field"><label>Who paid</label><select id="f-settle-from">${fromOpts}</select></div>
-            <div class="field"><label>Paid to</label><select id="f-settle-to">${toOpts}</select></div>
+            <div class="field"><label>Paid to</label><select id="f-settle-to" onchange="updateSettlePhoneInfo()">${toOpts}</select></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 100px;gap:10px">
             <div class="field"><label>Amount</label><input id="f-settle-amount" type="number" step="0.01" min="0" value="${pf?.amount||''}"></div>
@@ -3064,22 +3080,28 @@ function sheetContent(type) {
       const memberList = members.length ? members.map((m, i) => `
         <div class="member-row">
           <div class="member-avatar">${m.name.charAt(0).toUpperCase()}</div>
-          <div style="flex:1">
+          <div style="flex:1;min-width:0">
             <div style="font-size:14px;font-weight:500">${m.name}</div>
-            <div style="font-size:11px;color:var(--text3)">${m.userId ? `Telegram ID: ${m.userId}` : 'Manual member'}</div>
+            <div style="font-size:11px;color:${m.phone ? 'var(--text2)' : 'var(--danger)'};font-family:'JetBrains Mono',monospace">
+              ${m.phone ? `📱 ${m.phone}` : '⚠ no payment number'}
+            </div>
           </div>
           ${isAdmin ? `<span onclick="deleteMember(${i})" style="color:var(--danger);font-size:20px;cursor:pointer;padding:0 4px;line-height:1">×</span>` : ''}
         </div>`).join('')
         : `<div style="color:var(--text3);font-size:13px;padding:8px 0">No members yet. Friends join by opening the Split tab.</div>`;
       return `
         <div class="sheet-title">Split Members</div>
-        <div class="sheet-sub">Members who joined by opening the Split tab</div>
+        <div class="sheet-sub">Payment numbers are shown when settling debts</div>
         <div class="sheet-body">
           <div style="margin-bottom:16px">${memberList}</div>
           ${isAdmin ? `
           <div class="field">
             <label>Add manual member (no Telegram)</label>
             <input id="f-manual-name" placeholder="e.g. Sarah" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Their phone / PayNow number</label>
+            <input id="f-manual-phone" type="tel" placeholder="e.g. +65 9123 4567" autocomplete="tel">
           </div>
           <button class="btn-primary" onclick="submitManualMember()">Add Member</button>` : ''}
           <button class="btn-secondary" onclick="_closeSheet()">Close</button>
@@ -3427,11 +3449,13 @@ function renderExpenses() {
 function promptMemberRegister() { openSheet('register-member'); }
 
 function submitMemberRegister() {
-  const name = document.getElementById('f-member-name')?.value.trim();
-  if (!name) { alert('Enter your name'); return; }
+  const name  = document.getElementById('f-member-name')?.value.trim();
+  const phone = document.getElementById('f-member-phone')?.value.trim();
+  if (!name)  { alert('Enter your name'); return; }
+  if (!phone) { alert('Enter your phone / PayNow number — others need this to pay you back'); return; }
   if (!appData.members) appData.members = [];
   if (!appData.members.find(m => m.userId === userId)) {
-    appData.members.push({ id: 'm_' + Date.now(), name, userId });
+    appData.members.push({ id: 'm_' + Date.now(), name, userId, phone });
   }
   saveData().then(() => { _closeSheet(); renderTab('split'); });
 }
@@ -3592,6 +3616,23 @@ let _prefillSettle = null;
 
 function addSettlement()  { _prefillSettle = null; openSheet('settle-form'); }
 
+function updateSettlePhoneInfo() {
+  const toId  = document.getElementById('f-settle-to')?.value;
+  const m     = (appData.members || []).find(m => m.id === toId);
+  const box   = document.getElementById('settle-phone-info');
+  if (!box) return;
+  if (m?.phone) {
+    box.innerHTML = `<span style="font-size:22px">📱</span>
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Send payment to <strong style="color:var(--text2)">${m.name}</strong></div>
+        <div style="font-size:16px;font-weight:600;color:var(--gold2);font-family:'JetBrains Mono',monospace;letter-spacing:0.5px">${m.phone}</div>
+      </div>`;
+    box.style.display = 'flex';
+  } else {
+    box.style.display = 'none';
+  }
+}
+
 function quickSettle(fromId, toId, amount, currency) {
   _prefillSettle = { from: fromId, to: toId, amount, currency };
   openSheet('settle-form');
@@ -3654,10 +3695,11 @@ function submitCurrencySettings() {
 function openManageMembers() { openSheet('manage-members'); }
 
 function submitManualMember() {
-  const name = document.getElementById('f-manual-name')?.value.trim();
+  const name  = document.getElementById('f-manual-name')?.value.trim();
+  const phone = document.getElementById('f-manual-phone')?.value.trim();
   if (!name) { alert('Name required'); return; }
   if (!appData.members) appData.members = [];
-  appData.members.push({ id: 'm_' + Date.now(), name, userId: null });
+  appData.members.push({ id: 'm_' + Date.now(), name, userId: null, phone: phone || '' });
   saveData().then(() => {
     document.getElementById('sheet-inner').innerHTML = sheetContent('manage-members');
   });
