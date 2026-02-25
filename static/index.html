@@ -1565,8 +1565,8 @@ function initBulletinDrag() {
     if (!ghost || !scrollEl) return;
     const r = scrollEl.getBoundingClientRect();
     const fromTop = curY - r.top, fromBot = r.bottom - curY;
-    if (fromTop >= 0 && fromTop < EDGE)      scrollEl.scrollTop -= SPEED * (1 - fromTop / EDGE);
-    else if (fromBot >= 0 && fromBot < EDGE) scrollEl.scrollTop += SPEED * (1 - fromBot / EDGE);
+    if (fromTop < EDGE)      scrollEl.scrollTop -= SPEED * (1 - Math.max(0, fromTop) / EDGE);
+    else if (fromBot < EDGE) scrollEl.scrollTop += SPEED * (1 - Math.max(0, fromBot) / EDGE);
     rafId = requestAnimationFrame(autoScroll);
   }
   function stopScroll() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
@@ -1705,8 +1705,8 @@ function initWishlistDrag() {
     if (!ghost || !scrollEl) return;
     const r = scrollEl.getBoundingClientRect();
     const fromTop = curY - r.top, fromBot = r.bottom - curY;
-    if (fromTop >= 0 && fromTop < EDGE)      scrollEl.scrollTop -= SPEED * (1 - fromTop / EDGE);
-    else if (fromBot >= 0 && fromBot < EDGE) scrollEl.scrollTop += SPEED * (1 - fromBot / EDGE);
+    if (fromTop < EDGE)      scrollEl.scrollTop -= SPEED * (1 - Math.max(0, fromTop) / EDGE);
+    else if (fromBot < EDGE) scrollEl.scrollTop += SPEED * (1 - Math.max(0, fromBot) / EDGE);
     rafId = requestAnimationFrame(autoScroll);
   }
   function stopScroll() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
