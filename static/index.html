@@ -3360,7 +3360,7 @@ function renderExpenses() {
     ${summaryHtml}
     <div class="section-head">
       <span class="section-title">Outstanding Debts</span>
-      ${myDebtCount > 0 ? `<label class="toggle-label"><input type="checkbox" id="split-my-only" onchange="toggleMyDebts(this.checked)"> Mine (${myDebtCount})</label>` : ''}
+      ${myDebtCount > 0 ? `<div class="custom-check toggle-label" id="split-my-only" onclick="this.classList.toggle('checked');toggleMyDebts(this.classList.contains('checked'))"><div class="check-box" style="width:16px;height:16px;border-radius:4px;flex-shrink:0"><span class="check-tick" style="font-size:10px">✓</span></div>Mine (${myDebtCount})</div>` : ''}
     </div>
     <div id="split-debts-container">${debtRowsHtml}</div>
     <div class="section-head" style="margin-top:14px">
