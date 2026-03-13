@@ -2525,7 +2525,7 @@ function openSheet(type) {
     const sheet = document.getElementById('sheet');
     sheet.style.transform = 'translateY(0)';
     // Post-render hooks
-    if (type === 'expense-form') renderSplitInputs();
+    if (type === 'expense-form') { renderPayerInputs(); renderSplitInputs(); }
   });
 }
 
@@ -2921,10 +2921,8 @@ function sheetContent(type) {
             <div class="field"><label>Amount</label><input id="f-exp-amount" type="number" step="0.01" min="0" value="${exp?.amount||''}" placeholder="0.00" oninput="renderSplitInputs()"></div>
             <div class="field"><label>Currency</label><select id="f-exp-currency">${currOptions}</select></div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="field"><label>Date</label><input id="f-exp-date" type="date" value="${exp?.date||today}"></div>
-            <div class="field"><label>Paid by</label><select id="f-exp-paidby">${memberOptions}</select></div>
-          </div>
+          <div class="field"><label>Date</label><input id="f-exp-date" type="date" value="${exp?.date||today}"></div>
+          <div class="field"><label>Who paid?</label><div id="f-exp-payers-container"></div></div>
           <div class="field"><label>Category</label><select id="f-exp-category">${catOptions}</select></div>
           <div class="field">
             <label>Split</label>
@@ -3196,8 +3194,14 @@ function computeSimplifiedDebts() {
   members.forEach(m => { net[m.id] = 0; });
 
   expenses.forEach(exp => {
-    const baseAmt = toBase(exp.amount, exp.currency);
-    net[exp.paidBy] = (net[exp.paidBy] || 0) + baseAmt;
+    if (exp.payments && Object.keys(exp.payments).length) {
+      Object.entries(exp.payments).forEach(([mid, paid]) => {
+        net[mid] = (net[mid] || 0) + toBase(paid, exp.currency);
+      });
+    } else {
+      const baseAmt = toBase(exp.amount, exp.currency);
+      net[exp.paidBy] = (net[exp.paidBy] || 0) + baseAmt;
+    }
     Object.entries(exp.splits || {}).forEach(([mid, share]) => {
       net[mid] = (net[mid] || 0) - toBase(share, exp.currency);
     });
@@ -3328,7 +3332,7 @@ function renderExpenses() {
         <div class="expense-row-icon">${_catIcon(exp.category)}</div>
         <div class="expense-row-body">
           <div class="expense-row-title">${exp.title}</div>
-          <div class="expense-row-meta">Paid by ${_memberName(exp.paidBy)} · ${pCount} ${pCount===1?'person':'people'}</div>
+          <div class="expense-row-meta">Paid by ${exp.payments && Object.keys(exp.payments).length > 1 ? Object.keys(exp.payments).map(_memberName).join(', ') : _memberName(exp.paidBy)} · ${pCount} ${pCount===1?'person':'people'}</div>
         </div>
         <div class="expense-row-right">
           <div class="expense-row-amount">${_fmtAmt(exp.amount, exp.currency)}</div>
@@ -3456,9 +3460,16 @@ function renderSplitInputs() {
   const count    = members.length || 1;
   const exp      = _editExpenseIdx >= 0 ? appData.expenses[_editExpenseIdx] : null;
 
+  // Capture current checked state before re-render
+  const domChecked = new Map();
+  container.querySelectorAll('.exp-participant-cb').forEach(el => {
+    domChecked.set(el.dataset.memberId, el.classList.contains('checked'));
+  });
+  const hasRendered = domChecked.size > 0;
+
   let html = '<div class="split-participants">';
   members.forEach(m => {
-    const isIn = exp ? (exp.participants || []).includes(m.id) : true;
+    const isIn = hasRendered ? (domChecked.get(m.id) ?? true) : (exp ? (exp.participants || []).includes(m.id) : true);
     let extra = '';
     const defaultShare = exp?.splits?.[m.id];
     if (_splitType === 'exact') {
@@ -3474,7 +3485,9 @@ function renderSplitInputs() {
       extra = `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text3)">${amount && count ? (amount/count).toFixed(2) : '—'}</span>`;
     }
     html += `<div class="split-participant-row">
-      <input type="checkbox" class="exp-participant-cb" data-member-id="${m.id}" ${isIn?'checked':''} onchange="renderSplitInputs()" style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
+      <div class="custom-check exp-participant-cb ${isIn?'checked':''}" data-member-id="${m.id}" onclick="this.classList.toggle('checked');renderSplitInputs()">
+        <div class="check-box" style="width:18px;height:18px;border-radius:5px;flex-shrink:0"><span class="check-tick" style="font-size:11px">✓</span></div>
+      </div>
       <div class="member-avatar">${m.name.charAt(0).toUpperCase()}</div>
       <span style="flex:1;font-size:14px">${m.name}${m.userId===userId?' (you)':''}</span>
       ${extra}
@@ -3482,6 +3495,48 @@ function renderSplitInputs() {
   });
   html += '</div>';
   container.innerHTML = html;
+}
+
+function renderPayerInputs() {
+  const container = document.getElementById('f-exp-payers-container');
+  if (!container) return;
+  const members   = appData.members || [];
+  const exp       = _editExpenseIdx >= 0 ? appData.expenses[_editExpenseIdx] : null;
+  const total     = parseFloat(document.getElementById('f-exp-amount')?.value) || 0;
+  const myMember  = _myMember();
+  const defaultId = exp?.paidBy || myMember?.id || members[0]?.id || '';
+  const payments  = exp?.payments || {};
+  const hasPayments = Object.keys(payments).length > 0;
+
+  let html = '<div class="split-participants">';
+  members.forEach(m => {
+    const isPayer  = hasPayments ? (payments[m.id] !== undefined) : m.id === defaultId;
+    const paidAmt  = hasPayments ? (payments[m.id] || 0) : (isPayer ? total : 0);
+    const disabled = isPayer ? '' : 'disabled';
+    const opacity  = isPayer ? '1' : '0.25';
+    html += `<div class="split-participant-row">
+      <div class="custom-check exp-payer-cb ${isPayer?'checked':''}" data-member-id="${m.id}" onclick="togglePayer(this)">
+        <div class="check-box" style="width:18px;height:18px;border-radius:5px;flex-shrink:0"><span class="check-tick" style="font-size:11px">✓</span></div>
+      </div>
+      <div class="member-avatar">${m.name.charAt(0).toUpperCase()}</div>
+      <span style="flex:1;font-size:14px">${m.name}${m.userId===userId?' (you)':''}</span>
+      <input class="payer-amt-input" data-mid="${m.id}" type="number" step="0.01" min="0"
+        value="${isPayer ? paidAmt.toFixed(2) : ''}" placeholder="0.00" ${disabled}
+        style="width:75px;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:8px;color:var(--text);font-size:13px;text-align:right;opacity:${opacity}">
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function togglePayer(el) {
+  el.classList.toggle('checked');
+  const row  = el.closest('.split-participant-row');
+  const inp  = row.querySelector('.payer-amt-input');
+  const isOn = el.classList.contains('checked');
+  inp.disabled     = !isOn;
+  inp.style.opacity = isOn ? '1' : '0.25';
+  if (!isOn) inp.value = '';
 }
 
 function computeSplitsFromForm(participants, amount) {
@@ -3523,16 +3578,28 @@ function submitExpense() {
   const amount   = parseFloat(document.getElementById('f-exp-amount')?.value);
   const currency = document.getElementById('f-exp-currency')?.value;
   const date     = document.getElementById('f-exp-date')?.value;
-  const paidBy   = document.getElementById('f-exp-paidby')?.value;
   const category = document.getElementById('f-exp-category')?.value;
   const note     = document.getElementById('f-exp-note')?.value.trim() || '';
 
-  if (!title || !amount || isNaN(amount) || !currency || !date || !paidBy) {
-    alert('Title, amount, currency, date and payer are required'); return;
+  if (!title || !amount || isNaN(amount) || !currency || !date) {
+    alert('Title, amount, currency and date are required'); return;
   }
 
+  // Multiple payers
+  const payments = {};
+  document.querySelectorAll('.exp-payer-cb.checked').forEach(cb => {
+    const inp = cb.closest('.split-participant-row').querySelector('.payer-amt-input');
+    payments[cb.dataset.memberId] = parseFloat(inp?.value || 0) || 0;
+  });
+  if (!Object.keys(payments).length) { alert('Select at least one payer'); return; }
+  const payerTotal = Object.values(payments).reduce((a, b) => a + b, 0);
+  if (Math.abs(payerTotal - amount) > 0.02) {
+    alert(`Payer amounts must sum to ${amount} (currently ${payerTotal.toFixed(2)})`); return;
+  }
+  const paidBy = Object.keys(payments)[0]; // backward compat
+
   const participants = [];
-  document.querySelectorAll('.exp-participant-cb:checked').forEach(cb => participants.push(cb.dataset.memberId));
+  document.querySelectorAll('.exp-participant-cb.checked').forEach(cb => participants.push(cb.dataset.memberId));
   if (!participants.length) { alert('Select at least one participant'); return; }
 
   const splits = computeSplitsFromForm(participants, amount);
@@ -3540,7 +3607,7 @@ function submitExpense() {
 
   const exp = {
     id:           _editExpenseIdx >= 0 ? appData.expenses[_editExpenseIdx].id : 'exp_' + Date.now(),
-    title, amount, currency, date, paidBy, participants, splitType: _splitType, splits, category, note
+    title, amount, currency, date, paidBy, payments, participants, splitType: _splitType, splits, category, note
   };
 
   if (_editExpenseIdx >= 0) appData.expenses[_editExpenseIdx] = exp;
